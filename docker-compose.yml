@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:latest
+    expose:
+      - "5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: is_app
+    ports:
+      - "5432:5432"
+#  prometheus:
+#    image: prom/prometheus:v2.53.0
+#    container_name: prometheus
+#    volumes:
+#      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+#    ports:
+#      - "9090:9090"
+#
+#  grafana:
+#    image: grafana/grafana:11.5.3
+#    container_name: grafana
+#    ports:
+#      - "3000:3000"
+#    volumes:
+#      - grafana_data:/var/lib/grafana
+#    environment:
+#      - GF_SECURITY_ADMIN_PASSWORD=admin

@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: IS-project
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: postgres
+    url: jdbc:postgresql://localhost:5432/is_app
+  jpa:
+    open-in-view: false
+    properties:
+      eclipselink.weaving: false
+      eclipselink.logging.level: INFO
