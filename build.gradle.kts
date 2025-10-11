@@ -31,7 +31,8 @@ dependencies {
     // https://mvnrepository.com/artifact/org.eclipse.persistence/eclipselink
     implementation("org.eclipse.persistence:eclipselink:4.0.6")
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
-    implementation("org.springframework.boot:spring-boot-starter-security")
+//    До лучших времен
+//    implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-web")
     compileOnly("org.projectlombok:lombok")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
