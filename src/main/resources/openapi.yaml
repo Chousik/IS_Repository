@@ -1,0 +1,1168 @@
+openapi: 3.0.3
+info:
+  title: Study Group Management API
+  version: 1.1.0
+  description: |
+    API for managing StudyGroup entities and related domain objects. Supports CRUD operations,
+    filtering, sorting, pagination, batch actions, statistics, real-time event streaming, and
+    association of existing auxiliary objects.
+servers:
+  - url: /api/v1
+paths:
+  /studygroups:
+    get:
+      tags:
+        - StudyGroups
+      summary: List study groups
+      operationId: listStudyGroups
+      description: |
+        Returns a paged list of study groups. Supports filtering by exact matches for string fields and sorting by any
+        sortable column. Results include associated Coordinates and Person/Location details.
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/SizeParameter'
+        - $ref: '#/components/parameters/SortParameter'
+        - name: name
+          in: query
+          schema:
+            type: string
+            minLength: 1
+          description: Exact match filter for the study group name.
+        - name: groupAdminName
+          in: query
+          schema:
+            type: string
+            minLength: 1
+          description: Exact match filter for the group administrator name.
+        - name: groupAdminLocationName
+          in: query
+          schema:
+            type: string
+            minLength: 1
+          description: Exact match filter for the administrator location name.
+        - name: formOfEducation
+          in: query
+          schema:
+            $ref: '#/components/schemas/FormOfEducation'
+          description: Filter by form of education.
+        - name: semesterEnum
+          in: query
+          schema:
+            $ref: '#/components/schemas/Semester'
+          description: Filter by semester value.
+      responses:
+        '200':
+          description: Page of study groups.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroupPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    post:
+      tags:
+        - StudyGroups
+      summary: Create study group
+      operationId: createStudyGroup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudyGroupCreateRequest'
+      responses:
+        '201':
+          description: Study group created.
+          headers:
+            Location:
+              description: Absolute URI of the created study group resource.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /studygroups/{id}:
+    get:
+      tags:
+        - StudyGroups
+      summary: Get study group by id
+      operationId: getStudyGroupById
+      parameters:
+        - $ref: '#/components/parameters/StudyGroupIdPathParameter'
+      responses:
+        '200':
+          description: Study group with related objects.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroup'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - StudyGroups
+      summary: Update study group
+      operationId: updateStudyGroup
+      parameters:
+        - $ref: '#/components/parameters/StudyGroupIdPathParameter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudyGroupUpdateRequest'
+      responses:
+        '200':
+          description: Updated study group.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - StudyGroups
+      summary: Partially update study group
+      operationId: patchStudyGroup
+      parameters:
+        - $ref: '#/components/parameters/StudyGroupIdPathParameter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudyGroupPatchRequest'
+      responses:
+        '200':
+          description: Partially updated study group.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - StudyGroups
+      summary: Delete study group
+      operationId: deleteStudyGroup
+      parameters:
+        - $ref: '#/components/parameters/StudyGroupIdPathParameter'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteStudyGroupRequest'
+            examples:
+              reassign:
+                summary: Reassign dependent entities before deletion
+                value:
+                  reassignments:
+                    - relation: students
+                      targetId: 42
+      responses:
+        '204':
+          description: Study group deleted.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /studygroups/{id}/group-admin:
+    put:
+      tags:
+        - StudyGroups
+      summary: Assign existing group administrator
+      operationId: assignGroupAdmin
+      parameters:
+        - $ref: '#/components/parameters/StudyGroupIdPathParameter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupAdminAssignmentRequest'
+      responses:
+        '200':
+          description: Group administrator reassigned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /studygroups/{id}/students:
+    post:
+      tags:
+        - StudyGroups
+        - Students
+      summary: Add student to study group
+      operationId: addStudentToGroup
+      parameters:
+        - $ref: '#/components/parameters/StudyGroupIdPathParameter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddStudentRequest'
+      responses:
+        '201':
+          description: Student added and group updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /studygroups/{id}/students/{studentId}:
+    post:
+      tags:
+        - StudyGroups
+        - Students
+      summary: Attach existing student to study group
+      operationId: attachExistingStudent
+      parameters:
+        - $ref: '#/components/parameters/StudyGroupIdPathParameter'
+        - $ref: '#/components/parameters/StudentIdPathParameter'
+      responses:
+        '200':
+          description: Student attached and group updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroup'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - StudyGroups
+        - Students
+      summary: Detach student from study group
+      operationId: detachStudentFromGroup
+      parameters:
+        - $ref: '#/components/parameters/StudyGroupIdPathParameter'
+        - $ref: '#/components/parameters/StudentIdPathParameter'
+      responses:
+        '200':
+          description: Student detached and group updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroup'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /studygroups/actions/delete-all-by-semester:
+    post:
+      tags:
+        - StudyGroupOperations
+      summary: Delete all study groups matching semester
+      operationId: deleteAllBySemester
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteBySemesterRequest'
+      responses:
+        '200':
+          description: Result of the bulk delete operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkOperationResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /studygroups/actions/delete-one-by-semester:
+    post:
+      tags:
+        - StudyGroupOperations
+      summary: Delete any one study group matching semester
+      operationId: deleteOneBySemester
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteBySemesterRequest'
+      responses:
+        '200':
+          description: Deleted study group.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /studygroups/actions/group-by-should-be-expelled:
+    get:
+      tags:
+        - StudyGroupOperations
+      summary: Group study groups by shouldBeExpelled
+      operationId: groupByShouldBeExpelled
+      responses:
+        '200':
+          description: Counts of study groups grouped by shouldBeExpelled value.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShouldBeExpelledGroup'
+  /studygroups/actions/count-expelled:
+    get:
+      tags:
+        - StudyGroupOperations
+      summary: Count expelled students across study groups
+      operationId: countTotalExpelled
+      responses:
+        '200':
+          description: Total expelled students value.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TotalExpelledResponse'
+  /studygroups/stream:
+    get:
+      tags:
+        - StudyGroups
+      summary: Subscribe to study group events
+      operationId: streamStudyGroupEvents
+      description: |
+        Provides a Server-Sent Events stream that emits notifications when study groups are created, updated, or deleted.
+        Clients should reconnect using HTTP Last-Event-ID header to resume from the last processed event id.
+      responses:
+        '200':
+          description: Stream of study group events.
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/StudyGroupEvent'
+        '503':
+          description: Stream could not be established.
+  /persons:
+    get:
+      tags:
+        - Persons
+      summary: List persons
+      operationId: listPersons
+      description: List existing persons with pagination, sorting, and exact-match filters for UI selection dialogs.
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/SizeParameter'
+        - $ref: '#/components/parameters/SortParameter'
+        - name: name
+          in: query
+          schema:
+            type: string
+            minLength: 1
+          description: Exact match filter for person name.
+        - name: hairColor
+          in: query
+          schema:
+            $ref: '#/components/schemas/Color'
+          description: Filter by hair color.
+        - name: eyeColor
+          in: query
+          schema:
+            $ref: '#/components/schemas/Color'
+          description: Filter by eye color.
+        - name: nationality
+          in: query
+          schema:
+            $ref: '#/components/schemas/Country'
+          description: Filter by nationality.
+      responses:
+        '200':
+          description: Page of persons.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /persons/{id}:
+    get:
+      tags:
+        - Persons
+      summary: Get person by id
+      operationId: getPersonById
+      parameters:
+        - $ref: '#/components/parameters/PersonIdPathParameter'
+      responses:
+        '200':
+          description: Person details including location.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Person'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /locations:
+    get:
+      tags:
+        - Locations
+      summary: List locations
+      operationId: listLocations
+      description: List existing locations with pagination, sorting, and exact-match filters.
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/SizeParameter'
+        - $ref: '#/components/parameters/SortParameter'
+        - name: name
+          in: query
+          schema:
+            type: string
+            minLength: 1
+          description: Exact match filter for location name.
+      responses:
+        '200':
+          description: Page of locations.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /locations/{id}:
+    get:
+      tags:
+        - Locations
+      summary: Get location by id
+      operationId: getLocationById
+      parameters:
+        - $ref: '#/components/parameters/LocationIdPathParameter'
+      responses:
+        '200':
+          description: Location details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /students:
+    get:
+      tags:
+        - Students
+      summary: List students
+      operationId: listStudents
+      description: List existing students with pagination, sorting, and exact-match filters.
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/SizeParameter'
+        - $ref: '#/components/parameters/SortParameter'
+        - name: name
+          in: query
+          schema:
+            type: string
+            minLength: 1
+          description: Exact match filter for student name.
+        - name: nationality
+          in: query
+          schema:
+            $ref: '#/components/schemas/Country'
+          description: Filter by nationality.
+        - name: hairColor
+          in: query
+          schema:
+            $ref: '#/components/schemas/Color'
+          description: Filter by hair color.
+        - name: eyeColor
+          in: query
+          schema:
+            $ref: '#/components/schemas/Color'
+          description: Filter by eye color.
+      responses:
+        '200':
+          description: Page of students.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /students/{id}:
+    get:
+      tags:
+        - Students
+      summary: Get student by id
+      operationId: getStudentById
+      parameters:
+        - $ref: '#/components/parameters/StudentIdPathParameter'
+      responses:
+        '200':
+          description: Student details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  parameters:
+    StudyGroupIdPathParameter:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+      description: Unique identifier of the study group.
+    StudentIdPathParameter:
+      name: studentId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+      description: Unique identifier of the student.
+    PersonIdPathParameter:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+      description: Unique identifier of the person.
+    LocationIdPathParameter:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+      description: Unique identifier of the location.
+    PageParameter:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Zero-based page index.
+    SizeParameter:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 20
+      description: Number of records per page.
+    SortParameter:
+      name: sort
+      in: query
+      schema:
+        type: array
+        items:
+          type: string
+      style: form
+      explode: true
+      description: Fields to sort by, e.g. `name,asc`. Multiple values accepted.
+  responses:
+    BadRequest:
+      description: Validation failed or malformed request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    StudyGroup:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        name:
+          type: string
+          minLength: 1
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        creationDate:
+          type: string
+          format: date-time
+        studentsCount:
+          type: integer
+          format: int64
+          minimum: 1
+          nullable: true
+        expelledStudents:
+          type: integer
+          format: int64
+          minimum: 1
+        transferredStudents:
+          type: integer
+          format: int64
+          minimum: 1
+        formOfEducation:
+          $ref: '#/components/schemas/FormOfEducation'
+          nullable: true
+        shouldBeExpelled:
+          type: integer
+          format: int64
+          minimum: 1
+        averageMark:
+          type: integer
+          minimum: 1
+          nullable: true
+        semesterEnum:
+          $ref: '#/components/schemas/Semester'
+        groupAdmin:
+          $ref: '#/components/schemas/Person'
+          nullable: true
+        students:
+          type: array
+          description: Students currently assigned to the study group.
+          items:
+            $ref: '#/components/schemas/Student'
+      required:
+        - id
+        - name
+        - coordinates
+        - creationDate
+        - expelledStudents
+        - transferredStudents
+        - shouldBeExpelled
+        - semesterEnum
+    StudyGroupCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        coordinates:
+          $ref: '#/components/schemas/CoordinatesCreate'
+        studentsCount:
+          type: integer
+          format: int64
+          minimum: 1
+          nullable: true
+        expelledStudents:
+          type: integer
+          format: int64
+          minimum: 1
+        transferredStudents:
+          type: integer
+          format: int64
+          minimum: 1
+        formOfEducation:
+          $ref: '#/components/schemas/FormOfEducation'
+          nullable: true
+        shouldBeExpelled:
+          type: integer
+          format: int64
+          minimum: 1
+        averageMark:
+          type: integer
+          minimum: 1
+          nullable: true
+        semesterEnum:
+          $ref: '#/components/schemas/Semester'
+        groupAdmin:
+          $ref: '#/components/schemas/PersonCreate'
+          nullable: true
+        groupAdminId:
+          type: integer
+          format: int64
+          minimum: 1
+          nullable: true
+      required:
+        - name
+        - coordinates
+        - expelledStudents
+        - transferredStudents
+        - shouldBeExpelled
+        - semesterEnum
+      not:
+        type: object
+        required:
+          - groupAdmin
+          - groupAdminId
+    StudyGroupUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/StudyGroupCreateRequest'
+    StudyGroupPatchRequest:
+      type: object
+      description: Partial update payload. All properties are optional.
+      properties:
+        name:
+          type: string
+          minLength: 1
+        coordinates:
+          $ref: '#/components/schemas/CoordinatesCreate'
+        studentsCount:
+          type: integer
+          format: int64
+          minimum: 1
+          nullable: true
+        expelledStudents:
+          type: integer
+          format: int64
+          minimum: 1
+        transferredStudents:
+          type: integer
+          format: int64
+          minimum: 1
+        formOfEducation:
+          $ref: '#/components/schemas/FormOfEducation'
+          nullable: true
+        shouldBeExpelled:
+          type: integer
+          format: int64
+          minimum: 1
+        averageMark:
+          type: integer
+          minimum: 1
+          nullable: true
+        semesterEnum:
+          $ref: '#/components/schemas/Semester'
+        groupAdmin:
+          $ref: '#/components/schemas/PersonCreate'
+          nullable: true
+        groupAdminId:
+          type: integer
+          format: int64
+          minimum: 1
+          nullable: true
+      not:
+        type: object
+        required:
+          - groupAdmin
+          - groupAdminId
+    Coordinates:
+      type: object
+      properties:
+        x:
+          type: integer
+          format: int64
+        y:
+          type: number
+          format: float
+      required:
+        - x
+        - y
+    CoordinatesCreate:
+      allOf:
+        - $ref: '#/components/schemas/Coordinates'
+    Person:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        name:
+          type: string
+          minLength: 1
+        eyeColor:
+          $ref: '#/components/schemas/Color'
+          nullable: true
+        hairColor:
+          $ref: '#/components/schemas/Color'
+        location:
+          $ref: '#/components/schemas/Location'
+          nullable: true
+        height:
+          type: integer
+          format: int64
+          minimum: 1
+        weight:
+          type: number
+          format: float
+          exclusiveMinimum: 0
+        nationality:
+          $ref: '#/components/schemas/Country'
+          nullable: true
+      required:
+        - id
+        - name
+        - hairColor
+        - height
+        - weight
+    PersonCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        eyeColor:
+          $ref: '#/components/schemas/Color'
+          nullable: true
+        hairColor:
+          $ref: '#/components/schemas/Color'
+        location:
+          $ref: '#/components/schemas/LocationCreate'
+          nullable: true
+        height:
+          type: integer
+          format: int64
+          minimum: 1
+        weight:
+          type: number
+          format: float
+          exclusiveMinimum: 0
+        nationality:
+          $ref: '#/components/schemas/Country'
+          nullable: true
+      required:
+        - name
+        - hairColor
+        - height
+        - weight
+    PersonPage:
+      type: object
+      properties:
+        metadata:
+          $ref: '#/components/schemas/PageMetadata'
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Person'
+      required:
+        - metadata
+        - content
+    Location:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        x:
+          type: integer
+        y:
+          type: number
+          format: double
+        z:
+          type: number
+          format: double
+        name:
+          type: string
+          minLength: 1
+      required:
+        - id
+        - y
+        - name
+    LocationCreate:
+      type: object
+      properties:
+        x:
+          type: integer
+        y:
+          type: number
+          format: double
+        z:
+          type: number
+          format: double
+        name:
+          type: string
+          minLength: 1
+      required:
+        - y
+        - name
+    LocationPage:
+      type: object
+      properties:
+        metadata:
+          $ref: '#/components/schemas/PageMetadata'
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
+      required:
+        - metadata
+        - content
+    DeleteStudyGroupRequest:
+      type: object
+      properties:
+        reassignments:
+          type: array
+          description: Mapping of dependent relations to replacement targets.
+          items:
+            $ref: '#/components/schemas/RelationReassignment'
+        force:
+          type: boolean
+          default: false
+          description: Proceed with deletion even if no reassignment matches exist.
+    RelationReassignment:
+      type: object
+      properties:
+        relation:
+          type: string
+          minLength: 1
+          description: Name of the relation that needs reassignment (e.g. `students`, `locations`).
+        targetId:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Identifier of the replacement entity.
+      required:
+        - relation
+        - targetId
+    DeleteBySemesterRequest:
+      type: object
+      properties:
+        semesterEnum:
+          $ref: '#/components/schemas/Semester'
+      required:
+        - semesterEnum
+    BulkOperationResult:
+      type: object
+      properties:
+        affectedCount:
+          type: integer
+          minimum: 0
+        message:
+          type: string
+      required:
+        - affectedCount
+    ShouldBeExpelledGroup:
+      type: object
+      properties:
+        shouldBeExpelled:
+          type: integer
+          format: int64
+          minimum: 1
+        count:
+          type: integer
+          minimum: 0
+      required:
+        - shouldBeExpelled
+        - count
+    TotalExpelledResponse:
+      type: object
+      properties:
+        totalExpelledStudents:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+        - totalExpelledStudents
+    AddStudentRequest:
+      type: object
+      description: Attach either a newly created student or an existing student by identifier to the group.
+      properties:
+        student:
+          $ref: '#/components/schemas/StudentCreateRequest'
+        studentId:
+          type: integer
+          format: int64
+          minimum: 1
+      oneOf:
+        - required:
+            - student
+        - required:
+            - studentId
+    Student:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        name:
+          type: string
+          minLength: 1
+        height:
+          type: integer
+          format: int64
+          minimum: 1
+        weight:
+          type: number
+          format: float
+          exclusiveMinimum: 0
+        nationality:
+          $ref: '#/components/schemas/Country'
+          nullable: true
+        eyeColor:
+          $ref: '#/components/schemas/Color'
+          nullable: true
+        hairColor:
+          $ref: '#/components/schemas/Color'
+          nullable: true
+        location:
+          $ref: '#/components/schemas/Location'
+          nullable: true
+      required:
+        - id
+        - name
+        - height
+        - weight
+    StudentCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        height:
+          type: integer
+          format: int64
+          minimum: 1
+        weight:
+          type: number
+          format: float
+          exclusiveMinimum: 0
+        nationality:
+          $ref: '#/components/schemas/Country'
+          nullable: true
+        eyeColor:
+          $ref: '#/components/schemas/Color'
+          nullable: true
+        hairColor:
+          $ref: '#/components/schemas/Color'
+          nullable: true
+        location:
+          $ref: '#/components/schemas/LocationCreate'
+          nullable: true
+      required:
+        - name
+        - height
+        - weight
+    StudentPage:
+      type: object
+      properties:
+        metadata:
+          $ref: '#/components/schemas/PageMetadata'
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Student'
+      required:
+        - metadata
+        - content
+    StudyGroupPage:
+      type: object
+      properties:
+        metadata:
+          $ref: '#/components/schemas/PageMetadata'
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudyGroup'
+      required:
+        - metadata
+        - content
+    PageMetadata:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+        totalPages:
+          type: integer
+          minimum: 0
+        totalElements:
+          type: integer
+          minimum: 0
+        sortedBy:
+          type: array
+          items:
+            type: string
+      required:
+        - page
+        - size
+        - totalPages
+        - totalElements
+    GroupAdminAssignmentRequest:
+      type: object
+      properties:
+        personId:
+          type: integer
+          format: int64
+          minimum: 1
+      required:
+        - personId
+    StudyGroupEvent:
+      type: object
+      description: Payload for a server-sent event emitted when a study group changes.
+      properties:
+        id:
+          type: string
+          description: Monotonic event identifier for reconnection.
+        eventType:
+          type: string
+          enum:
+            - CREATED
+            - UPDATED
+            - DELETED
+        group:
+          $ref: '#/components/schemas/StudyGroup'
+          nullable: true
+        occurredAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - eventType
+        - occurredAt
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+      required:
+        - error
+        - message
+    FormOfEducation:
+      type: string
+      enum:
+        - DISTANCE_EDUCATION
+        - FULL_TIME_EDUCATION
+        - EVENING_CLASSES
+    Semester:
+      type: string
+      enum:
+        - FIRST
+        - SECOND
+        - FOURTH
+        - SIXTH
+        - SEVENTH
+    Color:
+      type: string
+      enum:
+        - BLACK
+        - YELLOW
+        - ORANGE
+    Country:
+      type: string
+      enum:
+        - UNITED_KINGDOM
+        - FRANCE
+        - INDIA
+        - VATICAN
