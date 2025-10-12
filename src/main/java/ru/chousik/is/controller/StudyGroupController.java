@@ -8,7 +8,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.chousik.is.api.StudyGroupsApi;
 import ru.chousik.is.dto.request.StudyGroupAddRequest;
@@ -21,6 +24,7 @@ import ru.chousik.is.exception.BadRequestException;
 import ru.chousik.is.service.StudyGroupService;
 
 import java.util.List;
+import jakarta.validation.constraints.NotNull;
 
 @RestController
 @RequestMapping
@@ -33,23 +37,27 @@ public class StudyGroupController implements StudyGroupsApi {
     private final StudyGroupService studyGroupService;
 
     @Override
-    public ResponseEntity<List<StudyGroupResponse>> apiV1StudyGroupsByIdsGet(List<Long> ids) {
+    public ResponseEntity<List<StudyGroupResponse>> apiV1StudyGroupsByIdsGet(
+            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids) {
         return ResponseEntity.ok(studyGroupService.getByIds(ids));
     }
 
     @Override
-    public ResponseEntity<Long> apiV1StudyGroupsBySemesterDelete(Semester semesterEnum) {
+    public ResponseEntity<Long> apiV1StudyGroupsBySemesterDelete(
+            @NotNull @Valid @RequestParam(value = "semesterEnum", required = true) Semester semesterEnum) {
         long deleted = studyGroupService.deleteAllBySemester(semesterEnum);
         return ResponseEntity.ok(deleted);
     }
 
     @Override
-    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsBySemesterOneDelete(Semester semesterEnum) {
+    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsBySemesterOneDelete(
+            @NotNull @Valid @RequestParam(value = "semesterEnum", required = true) Semester semesterEnum) {
         return ResponseEntity.ok(studyGroupService.deleteOneBySemester(semesterEnum));
     }
 
     @Override
-    public ResponseEntity<Void> apiV1StudyGroupsDelete(List<Long> ids) {
+    public ResponseEntity<Void> apiV1StudyGroupsDelete(
+            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids) {
         studyGroupService.deleteMany(ids);
         return ResponseEntity.noContent().build();
     }
@@ -67,29 +75,34 @@ public class StudyGroupController implements StudyGroupsApi {
     }
 
     @Override
-    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdDelete(Long id) {
+    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdDelete(
+            @NotNull @PathVariable("id") Long id) {
         return ResponseEntity.ok(studyGroupService.delete(id));
     }
 
     @Override
-    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdGet(Long id) {
+    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdGet(
+            @NotNull @PathVariable("id") Long id) {
         return ResponseEntity.ok(studyGroupService.getById(id));
     }
 
     @Override
-    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdPatch(Long id,
-                                                                     @Valid StudyGroupUpdateRequest studyGroupUpdateRequest) {
+    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdPatch(
+            @NotNull @PathVariable("id") Long id,
+            @Valid @RequestBody StudyGroupUpdateRequest studyGroupUpdateRequest) {
         return ResponseEntity.ok(studyGroupService.update(id, studyGroupUpdateRequest));
     }
 
     @Override
-    public ResponseEntity<List<StudyGroupResponse>> apiV1StudyGroupsPatch(List<Long> ids,
-                                                                          @Valid StudyGroupUpdateRequest studyGroupUpdateRequest) {
+    public ResponseEntity<List<StudyGroupResponse>> apiV1StudyGroupsPatch(
+            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids,
+            @Valid @RequestBody StudyGroupUpdateRequest studyGroupUpdateRequest) {
         return ResponseEntity.ok(studyGroupService.updateMany(ids, studyGroupUpdateRequest));
     }
 
     @Override
-    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsPost(@Valid StudyGroupAddRequest studyGroupAddRequest) {
+    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsPost(
+            @Valid @RequestBody StudyGroupAddRequest studyGroupAddRequest) {
         return ResponseEntity.ok(studyGroupService.create(studyGroupAddRequest));
     }
 

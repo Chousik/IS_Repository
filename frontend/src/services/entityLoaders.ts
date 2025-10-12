@@ -13,7 +13,12 @@ async function loadPaged<T>(fetcher: (page: number) => Promise<any>): Promise<T[
   const result: T[] = [];
   let page = 0;
   while (true) {
-    const response = await fetcher(page);
+    let response: any;
+    try {
+      response = await fetcher(page);
+    } catch (error) {
+      throw new Error(`Не удалось получить данные страницы ${page + 1}: ${(error as Error).message}`);
+    }
     const mapped = mapPageModel<T>(response, PAGE_SIZE);
     result.push(...mapped.content);
     page += 1;

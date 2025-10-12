@@ -8,7 +8,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.chousik.is.api.CoordinatesApi;
 import ru.chousik.is.dto.request.CoordinatesAddRequest;
@@ -18,6 +21,7 @@ import ru.chousik.is.exception.BadRequestException;
 import ru.chousik.is.service.CoordinatesService;
 
 import java.util.List;
+import jakarta.validation.constraints.NotNull;
 
 @RestController
 @RequestMapping
@@ -30,12 +34,14 @@ public class CoordinatesController implements CoordinatesApi {
     private final CoordinatesService coordinatesService;
 
     @Override
-    public ResponseEntity<List<CoordinatesResponse>> apiV1CoordinatesByIdsGet(List<Long> ids) {
+    public ResponseEntity<List<CoordinatesResponse>> apiV1CoordinatesByIdsGet(
+            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids) {
         return ResponseEntity.ok(coordinatesService.getByIds(ids));
     }
 
     @Override
-    public ResponseEntity<Void> apiV1CoordinatesDelete(List<Long> ids) {
+    public ResponseEntity<Void> apiV1CoordinatesDelete(
+            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids) {
         coordinatesService.deleteMany(ids);
         return ResponseEntity.noContent().build();
     }
@@ -53,28 +59,34 @@ public class CoordinatesController implements CoordinatesApi {
     }
 
     @Override
-    public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdDelete(Long id) {
+    public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdDelete(
+            @NotNull @PathVariable("id") Long id) {
         return ResponseEntity.ok(coordinatesService.delete(id));
     }
 
     @Override
-    public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdGet(Long id) {
+    public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdGet(
+            @NotNull @PathVariable("id") Long id) {
         return ResponseEntity.ok(coordinatesService.getById(id));
     }
 
     @Override
-    public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdPatch(Long id, CoordinatesUpdateRequest coordinatesUpdateRequest) {
+    public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdPatch(
+            @NotNull @PathVariable("id") Long id,
+            @Valid @RequestBody CoordinatesUpdateRequest coordinatesUpdateRequest) {
         return ResponseEntity.ok(coordinatesService.update(id, coordinatesUpdateRequest));
     }
 
     @Override
-    public ResponseEntity<List<CoordinatesResponse>> apiV1CoordinatesPatch(List<Long> ids,
-                                                                          CoordinatesUpdateRequest coordinatesUpdateRequest) {
+    public ResponseEntity<List<CoordinatesResponse>> apiV1CoordinatesPatch(
+            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids,
+            @Valid @RequestBody CoordinatesUpdateRequest coordinatesUpdateRequest) {
         return ResponseEntity.ok(coordinatesService.updateMany(ids, coordinatesUpdateRequest));
     }
 
     @Override
-    public ResponseEntity<CoordinatesResponse> apiV1CoordinatesPost(@Valid CoordinatesAddRequest coordinatesAddRequest) {
+    public ResponseEntity<CoordinatesResponse> apiV1CoordinatesPost(
+            @Valid @RequestBody CoordinatesAddRequest coordinatesAddRequest) {
         return ResponseEntity.ok(coordinatesService.create(coordinatesAddRequest));
     }
 
