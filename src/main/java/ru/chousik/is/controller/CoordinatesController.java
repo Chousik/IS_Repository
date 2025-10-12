@@ -1,4 +1,5 @@
 package ru.chousik.is.controller;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
@@ -23,8 +24,6 @@ import java.util.Optional;
 @RequestMapping("/api/v1/coordinates")
 @RequiredArgsConstructor
 public class CoordinatesController {
-
-    private final CoordinatesRepository coordinatesRepository;
 
     private final CoordinatesMapper coordinatesMapper;
 
