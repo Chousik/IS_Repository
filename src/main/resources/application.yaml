@@ -11,3 +11,6 @@ spring:
     properties:
       eclipselink.weaving: false
       eclipselink.logging.level: INFO
+      eclipselink.ddl-generation: create-tables
+      eclipselink.ddl-generation.output-mode: database
+      eclipselink.default-schema: public

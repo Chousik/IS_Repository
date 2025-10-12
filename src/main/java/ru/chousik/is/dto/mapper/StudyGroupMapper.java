@@ -1,15 +1,14 @@
 package ru.chousik.is.dto.mapper;
 
-import org.mapstruct.*;
-import ru.chousik.is.dto.StudyGroupDto;
+import org.mapstruct.Mapper;
+import org.mapstruct.MappingConstants;
+import org.mapstruct.ReportingPolicy;
+import ru.chousik.is.dto.response.StudyGroupResponse;
 import ru.chousik.is.entity.StudyGroup;
 
 @Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING)
 public interface StudyGroupMapper {
-    @Mapping(source = "groupAdminId", target = "groupAdmin.id")
-    @Mapping(source = "coordinatesId", target = "coordinates.id")
-    StudyGroup toEntity(StudyGroupDto studyGroupDto);
+    StudyGroup toEntity(StudyGroupResponse studyGroupResponse);
 
-    @InheritInverseConfiguration(name = "toEntity")
-    StudyGroupDto toStudyGroupDto(StudyGroup studyGroup);
+    StudyGroupResponse toStudyGroupResponse(StudyGroup studyGroup);
 }
