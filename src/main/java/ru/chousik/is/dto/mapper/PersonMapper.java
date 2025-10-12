@@ -6,7 +6,7 @@ import org.mapstruct.ReportingPolicy;
 import ru.chousik.is.dto.response.PersonResponse;
 import ru.chousik.is.entity.Person;
 
-@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING)
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING, uses = LocationMapper.class)
 public interface PersonMapper {
     Person toEntity(PersonResponse personResponse);
 
