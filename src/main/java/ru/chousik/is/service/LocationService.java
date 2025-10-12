@@ -1,0 +1,135 @@
+package ru.chousik.is.service;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.mapping.PropertyReferenceException;
+import org.springframework.stereotype.Service;
+import ru.chousik.is.dto.mapper.LocationMapper;
+import ru.chousik.is.dto.request.LocationAddRequest;
+import ru.chousik.is.dto.request.LocationUpdateRequest;
+import ru.chousik.is.dto.response.LocationResponse;
+import ru.chousik.is.entity.Location;
+import ru.chousik.is.exception.BadRequestException;
+import ru.chousik.is.exception.NotFoundException;
+import ru.chousik.is.repository.LocationRepository;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@RequiredArgsConstructor
+@Service
+public class LocationService {
+
+    private final LocationRepository locationRepository;
+    private final LocationMapper locationMapper;
+
+    public Page<LocationResponse> getAll(Pageable pageable, String sortBy, Sort.Direction direction) {
+        Pageable sortedPageable = applySorting(pageable, sortBy, direction);
+        Page<Location> page = locationRepository.findAll(sortedPageable);
+        return page.map(locationMapper::toLocationResponse);
+    }
+
+    public LocationResponse getById(Long id) {
+        Location location = locationRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Локация с идентификатором %d не найдена".formatted(id)));
+        return locationMapper.toLocationResponse(location);
+    }
+
+    public List<LocationResponse> getByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        List<Location> locations = locationRepository.findAllById(ids);
+        return locations.stream()
+                .map(locationMapper::toLocationResponse)
+                .toList();
+    }
+
+    public LocationResponse create(LocationAddRequest request) {
+        Location location = locationMapper.toEntity(request);
+        Location saved = locationRepository.save(location);
+        return locationMapper.toLocationResponse(saved);
+    }
+
+    public LocationResponse update(Long id, LocationUpdateRequest request) {
+        validateUpdateRequest(request);
+
+        Location location = locationRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Локация с идентификатором %d не найдена".formatted(id)));
+
+        locationMapper.updateWithNull(request, location);
+        Location saved = locationRepository.save(location);
+        return locationMapper.toLocationResponse(saved);
+    }
+
+    public List<LocationResponse> updateMany(List<Long> ids, LocationUpdateRequest request) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        validateUpdateRequest(request);
+
+        Collection<Location> locations = locationRepository.findAllById(ids);
+        validateAllIdsPresent(ids, locations);
+
+        for (Location location : locations) {
+            locationMapper.updateWithNull(request, location);
+        }
+
+        List<Location> saved = locationRepository.saveAll(locations);
+        return saved.stream().map(locationMapper::toLocationResponse).toList();
+    }
+
+    public LocationResponse delete(Long id) {
+        Location location = locationRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Локация с идентификатором %d не найдена".formatted(id)));
+        locationRepository.delete(location);
+        return locationMapper.toLocationResponse(location);
+    }
+
+    public void deleteMany(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        Collection<Location> locations = locationRepository.findAllById(ids);
+        validateAllIdsPresent(ids, locations);
+        locationRepository.deleteAll(locations);
+    }
+
+    private Pageable applySorting(Pageable pageable, String sortBy, Sort.Direction direction) {
+        String sortField = Objects.requireNonNullElse(sortBy, "id");
+        Sort.Direction sortDirection = direction == null ? Sort.Direction.ASC : direction;
+        try {
+            Sort sort = Sort.by(sortDirection, sortField);
+            return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        } catch (PropertyReferenceException e) {
+            throw new BadRequestException("Неизвестное поле сортировки '%s'".formatted(sortField));
+        }
+    }
+
+    private void validateUpdateRequest(LocationUpdateRequest request) {
+        if (request == null || (request.x() == null && request.y() == null && request.z() == null && request.name() == null)) {
+            throw new BadRequestException("Не переданы поля для обновления локации");
+        }
+        if (request.name() != null && request.name().isBlank()) {
+            throw new BadRequestException("Поле name не может быть пустым");
+        }
+    }
+
+    private void validateAllIdsPresent(List<Long> requestedIds, Collection<Location> foundEntities) {
+        Set<Long> foundIds = foundEntities.stream()
+                .map(Location::getId)
+                .collect(Collectors.toSet());
+        List<Long> missing = requestedIds.stream()
+                .filter(id -> !foundIds.contains(id))
+                .toList();
+        if (!missing.isEmpty()) {
+            throw new NotFoundException("Локации с идентификаторами %s не найдены".formatted(missing));
+        }
+    }
+}

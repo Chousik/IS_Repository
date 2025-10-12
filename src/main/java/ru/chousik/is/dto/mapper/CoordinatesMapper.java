@@ -1,8 +1,10 @@
 package ru.chousik.is.dto.mapper;
 
+import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
 import org.mapstruct.ReportingPolicy;
 import ru.chousik.is.dto.request.CoordinatesAddRequest;
 import ru.chousik.is.dto.request.CoordinatesUpdateRequest;
@@ -23,5 +25,6 @@ public interface CoordinatesMapper {
 
     CoordinatesUpdateRequest toCoordinatesUpdateRequest(Coordinates coordinates);
 
-    Coordinates updateWithNull(CoordinatesResponse coordinatesResponse, @MappingTarget Coordinates coordinates);
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void updateWithNull(CoordinatesUpdateRequest request, @MappingTarget Coordinates coordinates);
 }
