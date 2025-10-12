@@ -6,7 +6,8 @@ import org.mapstruct.ReportingPolicy;
 import ru.chousik.is.dto.response.StudyGroupResponse;
 import ru.chousik.is.entity.StudyGroup;
 
-@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING)
+@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING,
+        uses = {CoordinatesMapper.class, PersonMapper.class})
 public interface StudyGroupMapper {
     StudyGroup toEntity(StudyGroupResponse studyGroupResponse);
 
