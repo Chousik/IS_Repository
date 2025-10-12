@@ -2,6 +2,7 @@ package ru.chousik.is.dto.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingConstants;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.ReportingPolicy;
 import ru.chousik.is.dto.request.CoordinatesAddRequest;
 import ru.chousik.is.dto.request.CoordinatesUpdateRequest;
@@ -21,4 +22,6 @@ public interface CoordinatesMapper {
     Coordinates toEntity(CoordinatesUpdateRequest coordinatesUpdateRequest);
 
     CoordinatesUpdateRequest toCoordinatesUpdateRequest(Coordinates coordinates);
+
+    Coordinates updateWithNull(CoordinatesResponse coordinatesResponse, @MappingTarget Coordinates coordinates);
 }
