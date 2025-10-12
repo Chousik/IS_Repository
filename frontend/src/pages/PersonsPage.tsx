@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { personsApi, studyGroupsApi } from '../apiClient';
 import type {
   PersonAddRequest,
@@ -10,11 +10,20 @@ import type {
   StudyGroupResponse,
 } from '../api/models';
 import { loadAllLocations, loadAllPersons, loadAllStudyGroups } from '../services/entityLoaders';
+import { subscribeToEntityChanges } from '../services/events';
 import Modal from '../components/Modal';
 
 const PAGE_SIZE = 10;
 const colorValues: Color[] = ['BLACK', 'YELLOW', 'ORANGE'];
 const countryValues: Country[] = ['UNITED_KINGDOM', 'FRANCE', 'INDIA', 'VATICAN'];
+type LocationMode = 'none' | 'existing' | 'new';
+
+const resolveLocationMode = (person?: PersonResponse | null): LocationMode => {
+  if (!person?.location) {
+    return 'none';
+  }
+  return person.location.id ? 'existing' : 'new';
+};
 
 const PersonsPage = () => {
   const [persons, setPersons] = useState<PersonResponse[]>([]);
@@ -27,8 +36,10 @@ const PersonsPage = () => {
   const [editPerson, setEditPerson] = useState<PersonResponse | null>(null);
   const [deleteContext, setDeleteContext] = useState<{ person: PersonResponse; groupIds: number[] } | null>(null);
   const [replacementId, setReplacementId] = useState<number | ''>('');
+  const [createLocationMode, setCreateLocationMode] = useState<LocationMode>('none');
+  const [editLocationMode, setEditLocationMode] = useState<LocationMode>('none');
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     try {
       setLoading(true);
       const [people, locs, groups] = await Promise.all([
@@ -45,13 +56,20 @@ const PersonsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refreshData();
-    const interval = setInterval(refreshData, 7000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [refreshData]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToEntityChanges((change) => {
+      if (change.entity === 'PERSON' || change.entity === 'STUDY_GROUP' || change.entity === 'LOCATION') {
+        refreshData();
+      }
+    });
+    return unsubscribe;
+  }, [refreshData]);
 
   const maxPage = Math.max(1, Math.ceil(persons.length / PAGE_SIZE));
   const currentPage = Math.min(page, maxPage);
@@ -90,6 +108,7 @@ const PersonsPage = () => {
     try {
       await personsApi.apiV1PersonsPost({ personAddRequest: payload });
       setCreateOpen(false);
+      setCreateLocationMode('none');
       await refreshData();
     } catch (err: any) {
       alert(err?.message ?? 'Не удалось создать администратора');
@@ -131,6 +150,7 @@ const PersonsPage = () => {
     try {
       await personsApi.apiV1PersonsIdPatch({ id: editPerson.id, personUpdateRequest: payload });
       setEditPerson(null);
+      setEditLocationMode('none');
       await refreshData();
     } catch (err: any) {
       alert(err?.message ?? 'Не удалось обновить администратора');
@@ -188,83 +208,117 @@ const PersonsPage = () => {
 
   const locationOptions = locations.map((location) => ({ label: `#${location.id} ${location.name}`, value: location.id! }));
 
-  const renderPersonForm = (person?: PersonResponse) => {
-    const locationMode = person?.location?.id ? 'existing' : person?.location ? 'new' : 'none';
-    return (
-      <form className="form-grid" onSubmit={person ? handleUpdate : handleCreate}>
-        <div className="form-field">
-          <label>ФИО</label>
-          <input className="input" name="name" defaultValue={person?.name} required />
-        </div>
-        <div className="form-field">
-          <label>Цвет глаз</label>
-          <select className="select" name="eyeColor" defaultValue={person?.eyeColor ?? ''}>
-            <option value="">—</option>
-            {colorValues.map((value) => (
-              <option key={value} value={value}>{value}</option>
-            ))}
-          </select>
-        </div>
-        <div className="form-field">
-          <label>Цвет волос</label>
-          <select className="select" name="hairColor" defaultValue={person?.hairColor ?? 'BLACK'} required>
-            {colorValues.map((value) => (
-              <option key={value} value={value}>{value}</option>
-            ))}
-          </select>
-        </div>
-        <div className="form-field">
-          <label>Рост</label>
-          <input className="number-input" name="height" type="number" min={1} defaultValue={person?.height ?? 1} required />
-        </div>
-        <div className="form-field">
-          <label>Вес</label>
-          <input className="number-input" name="weight" type="number" min={1} step={0.1} defaultValue={person?.weight ?? 1} required />
-        </div>
-        <div className="form-field">
-          <label>Национальность</label>
-          <select className="select" name="nationality" defaultValue={person?.nationality ?? ''}>
-            <option value="">—</option>
-            {countryValues.map((value) => (
-              <option key={value} value={value}>{value}</option>
-            ))}
-          </select>
-        </div>
-        <div className="form-field">
-          <label>Локация</label>
-          <select className="select" name="locationMode" defaultValue={locationMode}>
-            <option value="none">Без локации</option>
-            <option value="existing">Существующая</option>
-            <option value="new">Новая</option>
-          </select>
-        </div>
+  const renderPersonForm = (
+    person: PersonResponse | undefined,
+    locationMode: LocationMode,
+    onLocationModeChange: (mode: LocationMode) => void,
+    onSubmit: (event: FormEvent<HTMLFormElement>) => void,
+    onCancel: () => void
+  ) => (
+    <form className="form-grid" onSubmit={onSubmit}>
+      <div className="form-field">
+        <label>ФИО</label>
+        <input className="input" name="name" defaultValue={person?.name} required />
+      </div>
+      <div className="form-field">
+        <label>Цвет глаз</label>
+        <select className="select" name="eyeColor" defaultValue={person?.eyeColor ?? ''}>
+          <option value="">—</option>
+          {colorValues.map((value) => (
+            <option key={value} value={value}>{value}</option>
+          ))}
+        </select>
+      </div>
+      <div className="form-field">
+        <label>Цвет волос</label>
+        <select className="select" name="hairColor" defaultValue={person?.hairColor ?? ''} required>
+          <option value="">—</option>
+          {colorValues.map((value) => (
+            <option key={value} value={value}>{value}</option>
+          ))}
+        </select>
+      </div>
+      <div className="form-field">
+        <label>Рост</label>
+        <input className="number-input" name="height" type="number" min={1} defaultValue={person?.height ?? 1} required />
+      </div>
+      <div className="form-field">
+        <label>Вес</label>
+        <input className="number-input" name="weight" type="number" min={1} step={0.1} defaultValue={person?.weight ?? 1} required />
+      </div>
+      <div className="form-field">
+        <label>Национальность</label>
+        <select className="select" name="nationality" defaultValue={person?.nationality ?? ''}>
+          <option value="">—</option>
+          {countryValues.map((value) => (
+            <option key={value} value={value}>{value}</option>
+          ))}
+        </select>
+      </div>
+      <div className="form-field">
+        <label>Локация</label>
+        <select
+          className="select"
+          name="locationMode"
+          value={locationMode}
+          onChange={(event) => onLocationModeChange(event.target.value as LocationMode)}
+        >
+          <option value="none">Без локации</option>
+          <option value="existing">Существующая</option>
+          <option value="new">Новая</option>
+        </select>
+      </div>
+      {locationMode === 'existing' && (
         <div className="form-field full-width">
-          <div className="form-inline" style={{ gap: '12px' }}>
-            <select className="select" name="locationId" defaultValue={person?.location?.id ?? ''}>
-              <option value="">—</option>
-              {locationOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-            <input className="input" name="locationName" placeholder="Имя" defaultValue={person?.location?.name ?? ''} />
-            <input className="number-input" name="locationX" type="number" placeholder="X" defaultValue={person?.location?.x ?? ''} />
-            <input className="number-input" name="locationY" type="number" placeholder="Y" defaultValue={person?.location?.y ?? ''} />
-            <input className="number-input" name="locationZ" type="number" placeholder="Z" defaultValue={person?.location?.z ?? ''} />
+          <label>Выберите локацию</label>
+          <select className="select" name="locationId" defaultValue={person?.location?.id ?? ''} required>
+            <option value="">—</option>
+            {locationOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
+      {locationMode === 'new' && (
+        <>
+          <div className="form-field">
+            <label>Название локации</label>
+            <input className="input" name="locationName" defaultValue={person?.location?.name ?? ''} required />
           </div>
-        </div>
-        <div className="modal-footer">
-          <button type="button" className="secondary-btn" onClick={() => (person ? setEditPerson(null) : setCreateOpen(false))}>Отмена</button>
-          <button type="submit" className="primary-btn">Сохранить</button>
-        </div>
-      </form>
-    );
-  };
+          <div className="form-field">
+            <label>Координата X</label>
+            <input className="number-input" name="locationX" type="number" defaultValue={person?.location?.x ?? ''} required />
+          </div>
+          <div className="form-field">
+            <label>Координата Y</label>
+            <input className="number-input" name="locationY" type="number" defaultValue={person?.location?.y ?? ''} required />
+          </div>
+          <div className="form-field">
+            <label>Координата Z</label>
+            <input className="number-input" name="locationZ" type="number" defaultValue={person?.location?.z ?? ''} required />
+          </div>
+        </>
+      )}
+      <div className="modal-footer">
+        <button type="button" className="secondary-btn" onClick={onCancel}>Отмена</button>
+        <button type="submit" className="primary-btn">Сохранить</button>
+      </div>
+    </form>
+  );
 
   return (
     <div>
       <div className="section-heading">
         <h2>Администраторы</h2>
-        <button className="primary-btn" onClick={() => setCreateOpen(true)}>Добавить</button>
+        <button
+          className="primary-btn"
+          onClick={() => {
+            setCreateLocationMode('none');
+            setCreateOpen(true);
+          }}
+        >
+          Добавить
+        </button>
       </div>
 
       {error && <div style={{ color: '#dc2626', marginBottom: 12 }}>{error}</div>}
@@ -298,7 +352,15 @@ const PersonsPage = () => {
                   <td>{person.location?.name ?? '—'}</td>
                   <td>
                     <div className="form-inline">
-                      <button className="secondary-btn" onClick={() => setEditPerson(person)}>Изменить</button>
+                      <button
+                        className="secondary-btn"
+                        onClick={() => {
+                          setEditPerson(person);
+                          setEditLocationMode(resolveLocationMode(person));
+                        }}
+                      >
+                        Изменить
+                      </button>
                       <button className="danger-btn" onClick={() => handleDelete(person)}>Удалить</button>
                     </div>
                   </td>
@@ -315,12 +377,46 @@ const PersonsPage = () => {
         <button className="secondary-btn" onClick={() => setPage((prev) => Math.min(maxPage, prev + 1))} disabled={currentPage === maxPage}>Вперёд</button>
       </div>
 
-      <Modal open={createOpen} title="Создание администратора" onClose={() => setCreateOpen(false)} footer={null}>
-        {renderPersonForm()}
+      <Modal
+        open={createOpen}
+        title="Создание администратора"
+        onClose={() => {
+          setCreateOpen(false);
+          setCreateLocationMode('none');
+        }}
+        footer={null}
+      >
+        {renderPersonForm(
+          undefined,
+          createLocationMode,
+          (mode) => setCreateLocationMode(mode),
+          handleCreate,
+          () => {
+            setCreateOpen(false);
+            setCreateLocationMode('none');
+          }
+        )}
       </Modal>
 
-      <Modal open={!!editPerson} title="Редактирование администратора" onClose={() => setEditPerson(null)} footer={null}>
-        {renderPersonForm(editPerson ?? undefined)}
+      <Modal
+        open={!!editPerson}
+        title="Редактирование администратора"
+        onClose={() => {
+          setEditPerson(null);
+          setEditLocationMode('none');
+        }}
+        footer={null}
+      >
+        {renderPersonForm(
+          editPerson ?? undefined,
+          editLocationMode,
+          (mode) => setEditLocationMode(mode),
+          handleUpdate,
+          () => {
+            setEditPerson(null);
+            setEditLocationMode('none');
+          }
+        )}
       </Modal>
 
       <Modal

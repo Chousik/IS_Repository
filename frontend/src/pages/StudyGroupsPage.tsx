@@ -1,105 +1,167 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  StudyGroupResponse,
-  StudyGroupAddRequest,
-  StudyGroupUpdateRequest,
   CoordinatesResponse,
-  PersonResponse,
   LocationResponse,
+  PersonResponse,
+  Semester,
+  StudyGroupAddRequest,
+  StudyGroupResponse,
+  StudyGroupUpdateRequest,
 } from '../api/models';
 import { studyGroupsApi } from '../apiClient';
 import {
   loadAllCoordinates,
   loadAllLocations,
   loadAllPersons,
-  loadAllStudyGroups,
 } from '../services/entityLoaders';
 import StudyGroupFormModal from '../components/study-groups/StudyGroupFormModal';
 import { formatDateTime } from '../utils/strings';
+import { mapPageModel, PagedResult } from '../utils/pagination';
+import { subscribeToEntityChanges, EntityChange } from '../services/events';
 
 const PAGE_SIZE = 10;
 
+type SortOrder = 'asc' | 'desc';
+
+type PagingState = {
+  page: number;
+  size: number;
+  sortField?: string;
+  sortOrder: SortOrder;
+};
+
+const initialPaged: PagedResult<StudyGroupResponse> = {
+  content: [],
+  page: 0,
+  size: PAGE_SIZE,
+  totalElements: 0,
+  totalPages: 0,
+};
+
+function nextSortState(currentField: string | undefined, currentOrder: SortOrder, targetField: string) {
+  if (currentField !== targetField) {
+    return { field: targetField, order: 'asc' as SortOrder };
+  }
+  if (currentOrder === 'asc') {
+    return { field: targetField, order: 'desc' as SortOrder };
+  }
+  return { field: undefined, order: 'asc' as SortOrder };
+}
+
+function sortIndicator(field: string | undefined, order: SortOrder, target: string) {
+  if (field !== target) {
+    return '';
+  }
+  return order === 'asc' ? '▲' : '▼';
+}
+
 const StudyGroupsPage = () => {
-  const [groups, setGroups] = useState<StudyGroupResponse[]>([]);
+  const [paging, setPaging] = useState<PagingState>({ page: 1, size: PAGE_SIZE, sortField: undefined, sortOrder: 'asc' });
+  const [pagedData, setPagedData] = useState<PagedResult<StudyGroupResponse>>(initialPaged);
+  const [loadingTable, setLoadingTable] = useState(false);
+  const [tableError, setTableError] = useState<string | null>(null);
   const [coordinates, setCoordinates] = useState<CoordinatesResponse[]>([]);
   const [persons, setPersons] = useState<PersonResponse[]>([]);
   const [locations, setLocations] = useState<LocationResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState({ name: '', admin: '' });
-  const [page, setPage] = useState(1);
   const [selectedGroup, setSelectedGroup] = useState<StudyGroupResponse | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [editingGroup, setEditingGroup] = useState<StudyGroupResponse | undefined>(undefined);
 
-  const refreshData = async () => {
+  const fetchReferences = useCallback(async () => {
     try {
-      setLoading(true);
-      const [groupsData, coordsData, personsData, locationsData] = await Promise.all([
-        loadAllStudyGroups(),
+      const [coords, people, locs] = await Promise.all([
         loadAllCoordinates(),
         loadAllPersons(),
         loadAllLocations(),
       ]);
-      setGroups(groupsData);
-      setCoordinates(coordsData);
-      setPersons(personsData);
-      setLocations(locationsData);
-      setError(null);
-    } catch (err: any) {
-      setError(err?.message ?? 'Не удалось загрузить данные');
-    } finally {
-      setLoading(false);
+      setCoordinates(coords);
+      setPersons(people);
+      setLocations(locs);
+    } catch (error) {
+      console.warn('Не удалось загрузить справочные данные', error);
     }
-  };
-
-  useEffect(() => {
-    refreshData();
-    const interval = setInterval(refreshData, 5000);
-    return () => clearInterval(interval);
   }, []);
 
-  const filteredGroups = useMemo(() => {
-    return groups.filter((group) => {
-      if (filters.name && !group.name.toLowerCase().includes(filters.name.toLowerCase())) {
-        return false;
-      }
-      if (filters.admin) {
-        const adminName = group.groupAdmin?.name ?? '';
-        if (adminName.toLowerCase() !== filters.admin.toLowerCase()) {
-          return false;
+  const fetchPage = useCallback(async () => {
+    setLoadingTable(true);
+    try {
+      const response = await studyGroupsApi.apiV1StudyGroupsGet({
+        page: paging.page - 1,
+        size: paging.size,
+        sortBy: paging.sortField,
+        direction: paging.sortField ? paging.sortOrder : undefined,
+      });
+      const mapped = mapPageModel<StudyGroupResponse>(response, paging.size);
+      setPagedData(mapped);
+      setTableError(null);
+    } catch (error: any) {
+      setTableError(error?.message ?? 'Не удалось загрузить данные');
+    } finally {
+      setLoadingTable(false);
+    }
+  }, [paging.page, paging.size, paging.sortField, paging.sortOrder]);
+
+  useEffect(() => {
+    fetchPage();
+  }, [fetchPage]);
+
+  useEffect(() => {
+    fetchReferences();
+  }, [fetchReferences]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToEntityChanges((change: EntityChange) => {
+      if (change.entity === 'STUDY_GROUP') {
+        fetchPage();
+        if (change.action === 'DELETED') {
+          const deletedId = (change.data as any)?.id;
+          setSelectedGroup((current) => (current && current.id === deletedId ? null : current));
         }
       }
-      return true;
+      if (change.entity === 'COORDINATES' || change.entity === 'PERSON' || change.entity === 'LOCATION') {
+        fetchReferences();
+      }
     });
-  }, [groups, filters]);
+    return unsubscribe;
+  }, [fetchPage, fetchReferences]);
 
-  const maxPage = Math.max(1, Math.ceil(filteredGroups.length / PAGE_SIZE));
-  const currentPage = Math.min(page, maxPage);
-  const paginatedGroups = filteredGroups.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const handleSortToggle = (field: string) => {
+    setPaging((prev) => {
+      const next = nextSortState(prev.sortField, prev.sortOrder, field);
+      return {
+        ...prev,
+        page: 1,
+        sortField: next.field,
+        sortOrder: next.order,
+      };
+    });
+  };
 
-  const openCreateForm = () => {
+  const maxPage = pagedData.totalPages > 0 ? pagedData.totalPages : 1;
+
+  const openCreateModal = () => {
     setFormMode('create');
     setEditingGroup(undefined);
     setFormOpen(true);
   };
 
-  const openEditForm = (group: StudyGroupResponse) => {
+  const openEditModal = (group: StudyGroupResponse) => {
     setFormMode('edit');
     setEditingGroup(group);
     setFormOpen(true);
   };
 
   const handleDelete = async (group: StudyGroupResponse) => {
+    if (!group.id) return;
     if (!window.confirm(`Удалить учебную группу "${group.name}"?`)) {
       return;
     }
     try {
-      await studyGroupsApi.apiV1StudyGroupsIdDelete({ id: group.id! });
-      await refreshData();
-    } catch (err: any) {
-      alert(err?.message ?? 'Не удалось удалить группу');
+      await studyGroupsApi.apiV1StudyGroupsIdDelete({ id: group.id });
+      await fetchPage();
+    } catch (error: any) {
+      alert(error?.message ?? 'Не удалось удалить группу');
     }
   };
 
@@ -114,63 +176,59 @@ const StudyGroupsPage = () => {
         studyGroupUpdateRequest: payload.payload,
       });
     }
-    await refreshData();
+    await fetchPage();
   };
+
+  const rows = useMemo(() => pagedData.content, [pagedData]);
 
   return (
     <div>
       <div className="section-heading">
         <h2>Учебные группы</h2>
-        <div className="table-toolbar">
-          <button className="primary-btn" onClick={openCreateForm}>Создать группу</button>
-          <button className="secondary-btn" onClick={refreshData} disabled={loading}>Обновить</button>
-        </div>
+        <button className="primary-btn" onClick={openCreateModal}>Создать группу</button>
       </div>
 
-      <div className="filter-row">
-        <input
-          className="input"
-          placeholder="Фильтр по названию"
-          value={filters.name}
-          onChange={(event) => setFilters((prev) => ({ ...prev, name: event.target.value }))}
-        />
-        <input
-          className="input"
-          placeholder="Фильтр по администратору (точное совпадение)"
-          value={filters.admin}
-          onChange={(event) => setFilters((prev) => ({ ...prev, admin: event.target.value }))}
-        />
-      </div>
-
-      {error && <div style={{ color: '#dc2626', marginBottom: 12 }}>{error}</div>}
+      {tableError && <div style={{ color: '#dc2626', marginBottom: 12 }}>{tableError}</div>}
 
       <div className="table-wrapper">
         <table>
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Название</th>
-              <th>Семестр</th>
-              <th>Студентов</th>
-              <th>Отчислено</th>
-              <th>Переведено</th>
+              <th onClick={() => handleSortToggle('id')} style={{ cursor: 'pointer' }}>
+                ID {sortIndicator(paging.sortField, paging.sortOrder, 'id')}
+              </th>
+              <th onClick={() => handleSortToggle('name')} style={{ cursor: 'pointer' }}>
+                Название {sortIndicator(paging.sortField, paging.sortOrder, 'name')}
+              </th>
+              <th onClick={() => handleSortToggle('semesterEnum')} style={{ cursor: 'pointer' }}>
+                Семестр {sortIndicator(paging.sortField, paging.sortOrder, 'semesterEnum')}
+              </th>
+              <th onClick={() => handleSortToggle('studentsCount')} style={{ cursor: 'pointer' }}>
+                Студентов {sortIndicator(paging.sortField, paging.sortOrder, 'studentsCount')}
+              </th>
+              <th onClick={() => handleSortToggle('expelledStudents')} style={{ cursor: 'pointer' }}>
+                Отчислено {sortIndicator(paging.sortField, paging.sortOrder, 'expelledStudents')}
+              </th>
+              <th onClick={() => handleSortToggle('transferredStudents')} style={{ cursor: 'pointer' }}>
+                Переведено {sortIndicator(paging.sortField, paging.sortOrder, 'transferredStudents')}
+              </th>
               <th>Администратор</th>
-              <th>Создано</th>
+              <th onClick={() => handleSortToggle('creationDate')} style={{ cursor: 'pointer' }}>
+                Создано {sortIndicator(paging.sortField, paging.sortOrder, 'creationDate')}
+              </th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={9}>Загрузка...</td>
-              </tr>
-            ) : paginatedGroups.length === 0 ? (
-              <tr>
-                <td colSpan={9}>Нет данных</td>
-              </tr>
+            {loadingTable ? (
+              <tr><td colSpan={9}>Загрузка...</td></tr>
+            ) : rows.length === 0 ? (
+              <tr><td colSpan={9}>Нет данных</td></tr>
             ) : (
-              paginatedGroups.map((group) => (
-                <tr key={group.id} onClick={() => setSelectedGroup(group)} style={{ cursor: 'pointer' }}>
+              rows.map((group) => (
+                <tr key={group.id}
+                    onClick={() => setSelectedGroup(group)}
+                    style={{ cursor: 'pointer' }}>
                   <td>{group.id}</td>
                   <td>{group.name}</td>
                   <td>{group.semesterEnum}</td>
@@ -186,7 +244,7 @@ const StudyGroupsPage = () => {
                         className="secondary-btn"
                         onClick={(event) => {
                           event.stopPropagation();
-                          openEditForm(group);
+                          openEditModal(group);
                         }}
                       >
                         Изменить
@@ -213,18 +271,16 @@ const StudyGroupsPage = () => {
       <div style={{ marginTop: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
         <button
           className="secondary-btn"
-          onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-          disabled={currentPage === 1}
+          onClick={() => setPaging((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+          disabled={paging.page === 1}
         >
           Назад
         </button>
-        <span>
-          Страница {currentPage} из {maxPage}
-        </span>
+        <span>Страница {paging.page} из {maxPage}</span>
         <button
           className="secondary-btn"
-          onClick={() => setPage((prev) => Math.min(maxPage, prev + 1))}
-          disabled={currentPage === maxPage}
+          onClick={() => setPaging((prev) => ({ ...prev, page: Math.min(maxPage, prev.page + 1) }))}
+          disabled={paging.page >= maxPage}
         >
           Вперёд
         </button>
@@ -245,7 +301,7 @@ const StudyGroupsPage = () => {
           <div className="drawer-field"><strong>Средний балл:</strong> {selectedGroup.averageMark ?? '—'}</div>
           <div className="drawer-field"><strong>Администратор:</strong> {selectedGroup.groupAdmin?.name ?? '—'}</div>
           <div className="drawer-field"><strong>Создано:</strong> {formatDateTime(selectedGroup.creationDate)}</div>
-          <button className="primary-btn" onClick={() => openEditForm(selectedGroup)}>Редактировать</button>
+          <button className="primary-btn" onClick={() => openEditModal(selectedGroup)}>Редактировать</button>
         </div>
       )}
 

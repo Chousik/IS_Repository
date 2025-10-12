@@ -61,7 +61,11 @@ public class PersonController implements PersonsApi {
     @Override
     public ResponseEntity<PersonResponse> apiV1PersonsIdDelete(
             @NotNull @PathVariable("id") Long id) {
-        return ResponseEntity.ok(personService.delete(id));
+        PersonResponse response = personService.delete(id);
+        if (response == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(response);
     }
 
     @Override

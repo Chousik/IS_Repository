@@ -1,50 +1,116 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { coordinatesApi, studyGroupsApi } from '../apiClient';
-import type {
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import {
   CoordinatesAddRequest,
   CoordinatesResponse,
   CoordinatesUpdateRequest,
   StudyGroupResponse,
 } from '../api/models';
+import { coordinatesApi, studyGroupsApi } from '../apiClient';
+import { mapPageModel, PagedResult } from '../utils/pagination';
+import { subscribeToEntityChanges, EntityChange } from '../services/events';
 import { loadAllCoordinates, loadAllStudyGroups } from '../services/entityLoaders';
-import Modal from '../components/Modal';
 
 const PAGE_SIZE = 10;
 
+type SortOrder = 'asc' | 'desc';
+
+type PagingState = {
+  page: number;
+  size: number;
+  sortField?: string;
+  sortOrder: SortOrder;
+};
+
+const initialPage: PagedResult<CoordinatesResponse> = {
+  content: [],
+  page: 0,
+  size: PAGE_SIZE,
+  totalElements: 0,
+  totalPages: 0,
+};
+
 const CoordinatesPage = () => {
-  const [coordinates, setCoordinates] = useState<CoordinatesResponse[]>([]);
+  const [paging, setPaging] = useState<PagingState>({ page: 1, size: PAGE_SIZE, sortField: undefined, sortOrder: 'asc' });
+  const [pagedData, setPagedData] = useState<PagedResult<CoordinatesResponse>>(initialPage);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [studyGroups, setStudyGroups] = useState<StudyGroupResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
+  const [allCoordinates, setAllCoordinates] = useState<CoordinatesResponse[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [editCoordinate, setEditCoordinate] = useState<CoordinatesResponse | null>(null);
   const [deleteContext, setDeleteContext] = useState<{ coordinate: CoordinatesResponse; groupIds: number[] } | null>(null);
   const [replacementId, setReplacementId] = useState<number | ''>('');
-  const [error, setError] = useState<string | null>(null);
 
-  const refreshData = async () => {
+  const fetchPage = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const [coords, groups] = await Promise.all([loadAllCoordinates(), loadAllStudyGroups()]);
-      setCoordinates(coords);
-      setStudyGroups(groups);
+      const response = await coordinatesApi.apiV1CoordinatesGet({
+        page: paging.page - 1,
+        size: paging.size,
+        sortBy: paging.sortField,
+        direction: paging.sortField ? paging.sortOrder : undefined,
+      });
+      setPagedData(mapPageModel<CoordinatesResponse>(response, paging.size));
       setError(null);
     } catch (err: any) {
       setError(err?.message ?? 'Не удалось загрузить координаты');
     } finally {
       setLoading(false);
     }
-  };
+  }, [paging.page, paging.size, paging.sortField, paging.sortOrder]);
 
-  useEffect(() => {
-    refreshData();
-    const interval = setInterval(refreshData, 7000);
-    return () => clearInterval(interval);
+  const fetchStudyGroups = useCallback(async () => {
+    try {
+      const [groups, coords] = await Promise.all([
+        loadAllStudyGroups(),
+        loadAllCoordinates(),
+      ]);
+      setStudyGroups(groups);
+      setAllCoordinates(coords);
+    } catch (err) {
+      console.warn('Не удалось загрузить учебные группы', err);
+    }
   }, []);
 
-  const maxPage = Math.max(1, Math.ceil(coordinates.length / PAGE_SIZE));
-  const currentPage = Math.min(page, maxPage);
-  const paginated = coordinates.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  useEffect(() => {
+    fetchPage();
+  }, [fetchPage]);
+
+  useEffect(() => {
+    fetchStudyGroups();
+  }, [fetchStudyGroups]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToEntityChanges((change: EntityChange) => {
+      if (change.entity === 'COORDINATES') {
+        fetchPage();
+        fetchStudyGroups();
+      }
+      if (change.entity === 'STUDY_GROUP') {
+        fetchStudyGroups();
+      }
+    });
+    return unsubscribe;
+  }, [fetchPage, fetchStudyGroups]);
+
+  const maxPage = pagedData.totalPages > 0 ? pagedData.totalPages : 1;
+
+  const toggleSort = (field: string) => {
+    setPaging((prev) => {
+      if (prev.sortField !== field) {
+        return { ...prev, page: 1, sortField: field, sortOrder: 'asc' };
+      }
+      if (prev.sortOrder === 'asc') {
+        return { ...prev, page: 1, sortField: field, sortOrder: 'desc' };
+      }
+      return { ...prev, page: 1, sortField: undefined, sortOrder: 'asc' };
+    });
+  };
+
+  const sortIcon = (field: string) => {
+    if (paging.sortField !== field) return '';
+    return paging.sortOrder === 'asc' ? '▲' : '▼';
+  };
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -56,7 +122,7 @@ const CoordinatesPage = () => {
     try {
       await coordinatesApi.apiV1CoordinatesPost({ coordinatesAddRequest: payload });
       setCreateOpen(false);
-      await refreshData();
+      await fetchPage();
     } catch (err: any) {
       alert(err?.message ?? 'Не удалось создать координаты');
     }
@@ -73,19 +139,21 @@ const CoordinatesPage = () => {
     try {
       await coordinatesApi.apiV1CoordinatesIdPatch({ id: editCoordinate.id, coordinatesUpdateRequest: payload });
       setEditCoordinate(null);
-      await refreshData();
+      await fetchPage();
     } catch (err: any) {
       alert(err?.message ?? 'Не удалось обновить координаты');
     }
   };
 
   const handleDelete = (coordinate: CoordinatesResponse) => {
-    const affected = studyGroups.filter((group) => group.coordinates?.id === coordinate.id).map((g) => g.id!).filter(Boolean);
+    if (!coordinate.id) return;
+    const affected = studyGroups.filter((group) => group.coordinates?.id === coordinate.id)
+      .map((g) => g.id!)
+      .filter(Boolean);
     if (affected.length === 0) {
       if (window.confirm('Удалить координаты?')) {
-        coordinatesApi
-          .apiV1CoordinatesIdDelete({ id: coordinate.id! })
-          .then(refreshData)
+        coordinatesApi.apiV1CoordinatesIdDelete({ id: coordinate.id })
+          .then(fetchPage)
           .catch((err) => alert(err?.message ?? 'Не удалось удалить координаты'));
       }
       return;
@@ -102,29 +170,30 @@ const CoordinatesPage = () => {
     try {
       await Promise.all(
         deleteContext.groupIds.map((id) =>
-          studyGroupsApi.apiV1StudyGroupsIdPatch({
-            id,
-            studyGroupUpdateRequest: { coordinatesId: Number(replacementId) },
-          })
+          studyGroupsApi.apiV1StudyGroupsIdPatch({ id, studyGroupUpdateRequest: { coordinatesId: Number(replacementId) } })
         )
       );
       await coordinatesApi.apiV1CoordinatesIdDelete({ id: deleteContext.coordinate.id });
       setDeleteContext(null);
       setReplacementId('');
-      await refreshData();
+      await fetchPage();
     } catch (err: any) {
       alert(err?.message ?? 'Не удалось переназначить координаты');
     }
   };
 
-  const replacementOptions = useMemo(
-    () =>
-      (deleteContext?.coordinate
-        ? coordinates.filter((coord) => coord.id !== deleteContext.coordinate.id)
-        : coordinates
-      ).map((coord) => ({ label: `#${coord.id} (${coord.x}; ${coord.y})`, value: coord.id! })),
-    [coordinates, deleteContext]
-  );
+  const replacementOptions = useMemo(() => {
+    const unique = new Map<number, CoordinatesResponse>();
+    for (const coord of allCoordinates) {
+      if (coord?.id != null) {
+        unique.set(coord.id, coord);
+      }
+    }
+    if (deleteContext?.coordinate?.id != null) {
+      unique.delete(deleteContext.coordinate.id);
+    }
+    return Array.from(unique.values()).map((coord) => ({ label: `#${coord.id} (${coord.x}; ${coord.y})`, value: coord.id! }));
+  }, [allCoordinates, deleteContext]);
 
   return (
     <div>
@@ -139,23 +208,19 @@ const CoordinatesPage = () => {
         <table>
           <thead>
             <tr>
-              <th>ID</th>
-              <th>X</th>
-              <th>Y</th>
+              <th onClick={() => toggleSort('id')} style={{ cursor: 'pointer' }}>ID {sortIcon('id')}</th>
+              <th onClick={() => toggleSort('x')} style={{ cursor: 'pointer' }}>X {sortIcon('x')}</th>
+              <th onClick={() => toggleSort('y')} style={{ cursor: 'pointer' }}>Y {sortIcon('y')}</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={4}>Загрузка...</td>
-              </tr>
-            ) : paginated.length === 0 ? (
-              <tr>
-                <td colSpan={4}>Нет данных</td>
-              </tr>
+              <tr><td colSpan={4}>Загрузка...</td></tr>
+            ) : pagedData.content.length === 0 ? (
+              <tr><td colSpan={4}>Нет данных</td></tr>
             ) : (
-              paginated.map((coord) => (
+              pagedData.content.map((coord) => (
                 <tr key={coord.id}>
                   <td>{coord.id}</td>
                   <td>{coord.x}</td>
@@ -174,109 +239,91 @@ const CoordinatesPage = () => {
       </div>
 
       <div style={{ marginTop: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
-        <button className="secondary-btn" onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={currentPage === 1}>
+        <button className="secondary-btn" onClick={() => setPaging((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))} disabled={paging.page === 1}>
           Назад
         </button>
-        <span>Страница {currentPage} из {maxPage}</span>
-        <button className="secondary-btn" onClick={() => setPage((prev) => Math.min(maxPage, prev + 1))} disabled={currentPage === maxPage}>
+        <span>Страница {paging.page} из {pagedData.totalPages > 0 ? pagedData.totalPages : 1}</span>
+        <button className="secondary-btn" onClick={() => setPaging((prev) => ({ ...prev, page: Math.min(prev.page + 1, pagedData.totalPages || 1) }))} disabled={paging.page >= (pagedData.totalPages || 1)}>
           Вперёд
         </button>
       </div>
 
-      <Modal
-        open={createOpen}
-        title="Создание координат"
-        onClose={() => setCreateOpen(false)}
-        footer={null}
-      >
-        <form className="form-grid" onSubmit={handleCreate}>
-          <div className="form-field">
-            <label>X</label>
-            <input className="number-input" name="x" type="number" required />
-          </div>
-          <div className="form-field">
-            <label>Y</label>
-            <input className="number-input" name="y" type="number" step="0.1" required />
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="secondary-btn" onClick={() => setCreateOpen(false)}>Отмена</button>
-            <button type="submit" className="primary-btn">Сохранить</button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal
-        open={!!editCoordinate}
-        title="Редактирование координат"
-        onClose={() => setEditCoordinate(null)}
-        footer={null}
-      >
-        <form className="form-grid" onSubmit={handleUpdate}>
-          <div className="form-field">
-            <label>X</label>
-            <input
-              className="number-input"
-              name="x"
-              type="number"
-              defaultValue={editCoordinate?.x}
-              required
-            />
-          </div>
-          <div className="form-field">
-            <label>Y</label>
-            <input
-              className="number-input"
-              name="y"
-              type="number"
-              step="0.1"
-              defaultValue={editCoordinate?.y}
-              required
-            />
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="secondary-btn" onClick={() => setEditCoordinate(null)}>Отмена</button>
-            <button type="submit" className="primary-btn">Сохранить</button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal
-        open={!!deleteContext}
-        title="Переназначение координат"
-        onClose={() => {
-          setDeleteContext(null);
-          setReplacementId('');
-        }}
-        footer={null}
-      >
-        {deleteContext && (
-          <form className="form-grid" onSubmit={(event) => { event.preventDefault(); confirmDeleteWithReplacement(); }}>
-            <p>
-              Координаты используются в учебных группах. Выберите другие координаты, чтобы переназначить {deleteContext.groupIds.length} групп(ы).
-            </p>
+      <div className="modal-overlay" style={{ display: createOpen ? 'flex' : 'none' }} onClick={() => setCreateOpen(false)}>
+        <div className="modal-body" onClick={(event) => event.stopPropagation()}>
+          <h3>Создание координат</h3>
+          <form className="form-grid" onSubmit={handleCreate}>
             <div className="form-field">
-              <label>Новые координаты</label>
-              <select
-                className="select"
-                value={replacementId}
-                onChange={(event) => setReplacementId(event.target.value ? Number(event.target.value) : '')}
-                required
-              >
-                <option value="">Выберите координаты</option>
-                {replacementOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <label>X</label>
+              <input className="number-input" name="x" type="number" required />
+            </div>
+            <div className="form-field">
+              <label>Y</label>
+              <input className="number-input" name="y" type="number" step="0.1" required />
             </div>
             <div className="modal-footer">
-              <button type="button" className="secondary-btn" onClick={() => setDeleteContext(null)}>Отмена</button>
-              <button type="submit" className="danger-btn">Переназначить и удалить</button>
+              <button type="button" className="secondary-btn" onClick={() => setCreateOpen(false)}>Отмена</button>
+              <button type="submit" className="primary-btn">Сохранить</button>
             </div>
           </form>
-        )}
-      </Modal>
+        </div>
+      </div>
+
+      <div className="modal-overlay" style={{ display: editCoordinate ? 'flex' : 'none' }} onClick={() => setEditCoordinate(null)}>
+        <div className="modal-body" onClick={(event) => event.stopPropagation()}>
+          <h3>Редактирование координат</h3>
+          <form className="form-grid" onSubmit={handleUpdate}>
+            <div className="form-field">
+              <label>X</label>
+              <input className="number-input" name="x" type="number" defaultValue={editCoordinate?.x} required />
+            </div>
+            <div className="form-field">
+              <label>Y</label>
+              <input className="number-input" name="y" type="number" step="0.1" defaultValue={editCoordinate?.y} required />
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="secondary-btn" onClick={() => setEditCoordinate(null)}>Отмена</button>
+              <button type="submit" className="primary-btn">Сохранить</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div className="modal-overlay" style={{ display: deleteContext ? 'flex' : 'none' }} onClick={() => setDeleteContext(null)}>
+        <div className="modal-body" onClick={(event) => event.stopPropagation()}>
+          <h3>Переназначение координат</h3>
+          {deleteContext && (
+            <form
+              className="form-grid"
+              onSubmit={(event) => {
+                event.preventDefault();
+                confirmDeleteWithReplacement();
+              }}
+            >
+              <p>
+                Координаты используются в {deleteContext.groupIds.length} учебных группах. Выберите другие координаты, чтобы переназначить их перед удалением.
+              </p>
+              <div className="form-field">
+                <label>Новые координаты</label>
+                <select
+                  className="select"
+                  value={replacementId}
+                  onChange={(event) => setReplacementId(event.target.value ? Number(event.target.value) : '')}
+                  required
+                >
+                  <option value="">Выберите координаты</option>
+                  {replacementOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="secondary-btn" onClick={() => setDeleteContext(null)}>Отмена</button>
+                <button type="submit" className="danger-btn">Переназначить и удалить</button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

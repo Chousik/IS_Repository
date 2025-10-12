@@ -77,7 +77,11 @@ public class StudyGroupController implements StudyGroupsApi {
     @Override
     public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdDelete(
             @NotNull @PathVariable("id") Long id) {
-        return ResponseEntity.ok(studyGroupService.delete(id));
+        StudyGroupResponse response = studyGroupService.delete(id);
+        if (response == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(response);
     }
 
     @Override

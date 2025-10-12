@@ -23,6 +23,7 @@ import ru.chousik.is.entity.Location;
 import ru.chousik.is.entity.Person;
 import ru.chousik.is.entity.StudyGroup;
 import ru.chousik.is.entity.Semester;
+import ru.chousik.is.event.EntityChangeNotifier;
 import ru.chousik.is.exception.BadRequestException;
 import ru.chousik.is.exception.NotFoundException;
 import ru.chousik.is.repository.CoordinatesRepository;
@@ -48,6 +49,7 @@ public class StudyGroupService {
     private final StudyGroupMapper studyGroupMapper;
     private final CoordinatesMapper coordinatesMapper;
     private final LocationMapper locationMapper;
+    private final EntityChangeNotifier entityChangeNotifier;
 
     public Page<StudyGroupResponse> getAll(Pageable pageable, String sortBy, Sort.Direction direction) {
         Pageable sortedPageable = applySorting(pageable, sortBy, direction);
@@ -96,7 +98,9 @@ public class StudyGroupService {
                 .build();
 
         StudyGroup saved = studyGroupRepository.save(studyGroup);
-        return studyGroupMapper.toStudyGroupResponse(saved);
+        StudyGroupResponse response = studyGroupMapper.toStudyGroupResponse(saved);
+        entityChangeNotifier.publish("STUDY_GROUP", "CREATED", response);
+        return response;
     }
 
     public StudyGroupResponse update(Long id, StudyGroupUpdateRequest request) {
@@ -108,7 +112,9 @@ public class StudyGroupService {
         applyUpdates(studyGroup, request);
 
         StudyGroup saved = studyGroupRepository.save(studyGroup);
-        return studyGroupMapper.toStudyGroupResponse(saved);
+        StudyGroupResponse response = studyGroupMapper.toStudyGroupResponse(saved);
+        entityChangeNotifier.publish("STUDY_GROUP", "UPDATED", response);
+        return response;
     }
 
     public List<StudyGroupResponse> updateMany(List<Long> ids, StudyGroupUpdateRequest request) {
@@ -135,14 +141,21 @@ public class StudyGroupService {
         }
 
         List<StudyGroup> saved = studyGroupRepository.saveAll(studyGroups);
-        return saved.stream().map(studyGroupMapper::toStudyGroupResponse).toList();
+        List<StudyGroupResponse> responses = saved.stream().map(studyGroupMapper::toStudyGroupResponse).toList();
+        responses.forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "UPDATED", response));
+        return responses;
     }
 
     public StudyGroupResponse delete(Long id) {
-        StudyGroup studyGroup = studyGroupRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Учебная группа с идентификатором %d не найдена".formatted(id)));
+        StudyGroup studyGroup = studyGroupRepository.findById(id).orElse(null);
+        if (studyGroup == null) {
+            entityChangeNotifier.publish("STUDY_GROUP", "DELETED", new DeletedPayload(id));
+            return null;
+        }
         studyGroupRepository.delete(studyGroup);
-        return studyGroupMapper.toStudyGroupResponse(studyGroup);
+        StudyGroupResponse response = studyGroupMapper.toStudyGroupResponse(studyGroup);
+        entityChangeNotifier.publish("STUDY_GROUP", "DELETED", response);
+        return response;
     }
 
     public void deleteMany(List<Long> ids) {
@@ -151,18 +164,27 @@ public class StudyGroupService {
         }
         Collection<StudyGroup> studyGroups = studyGroupRepository.findAllById(ids);
         validateAllIdsPresent(ids, studyGroups);
+        List<StudyGroupResponse> responses = studyGroups.stream()
+                .map(studyGroupMapper::toStudyGroupResponse)
+                .toList();
         studyGroupRepository.deleteAll(studyGroups);
+        responses.forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "DELETED", response));
     }
 
     public long deleteAllBySemester(Semester semesterEnum) {
         if (semesterEnum == null) {
             throw new BadRequestException("Не указан semesterEnum");
         }
-        long deleted = studyGroupRepository.deleteBySemesterEnum(semesterEnum);
-        if (deleted == 0) {
+        List<StudyGroup> studyGroups = studyGroupRepository.findAllBySemesterEnum(semesterEnum);
+        if (studyGroups.isEmpty()) {
             throw new NotFoundException("Учебные группы с семестром %s не найдены".formatted(semesterEnum));
         }
-        return deleted;
+        List<StudyGroupResponse> responses = studyGroups.stream()
+                .map(studyGroupMapper::toStudyGroupResponse)
+                .toList();
+        studyGroupRepository.deleteAll(studyGroups);
+        responses.forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "DELETED", response));
+        return responses.size();
     }
 
     public StudyGroupResponse deleteOneBySemester(Semester semesterEnum) {
@@ -172,8 +194,12 @@ public class StudyGroupService {
         StudyGroup studyGroup = studyGroupRepository.findFirstBySemesterEnum(semesterEnum)
                 .orElseThrow(() -> new NotFoundException("Учебные группы с семестром %s не найдены".formatted(semesterEnum)));
         studyGroupRepository.delete(studyGroup);
-        return studyGroupMapper.toStudyGroupResponse(studyGroup);
+        StudyGroupResponse response = studyGroupMapper.toStudyGroupResponse(studyGroup);
+        entityChangeNotifier.publish("STUDY_GROUP", "DELETED", response);
+        return response;
     }
+
+    private record DeletedPayload(Long id) {}
 
     public List<StudyGroupShouldBeExpelledGroupResponse> groupByShouldBeExpelled() {
         List<ShouldBeExpelledGroupProjection> stats = studyGroupRepository.countGroupedByShouldBeExpelled();

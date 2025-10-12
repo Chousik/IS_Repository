@@ -12,6 +12,7 @@ import ru.chousik.is.dto.request.CoordinatesAddRequest;
 import ru.chousik.is.dto.request.CoordinatesUpdateRequest;
 import ru.chousik.is.dto.response.CoordinatesResponse;
 import ru.chousik.is.entity.Coordinates;
+import ru.chousik.is.event.EntityChangeNotifier;
 import ru.chousik.is.exception.BadRequestException;
 import ru.chousik.is.exception.NotFoundException;
 import ru.chousik.is.repository.CoordinatesRepository;
@@ -28,6 +29,8 @@ public class CoordinatesService {
     private final CoordinatesRepository coordinatesRepository;
 
     private final CoordinatesMapper coordinatesMapper;
+
+    private final EntityChangeNotifier entityChangeNotifier;
 
     public Page<CoordinatesResponse> getAll(Pageable pageable, String sortBy, Sort.Direction direction) {
         Pageable sortedPageable = applySorting(pageable, sortBy, direction);
@@ -54,7 +57,9 @@ public class CoordinatesService {
     public CoordinatesResponse create(CoordinatesAddRequest request) {
         Coordinates coordinates = coordinatesMapper.toEntity(request);
         Coordinates saved = coordinatesRepository.save(coordinates);
-        return coordinatesMapper.toCoordinatesResponse(saved);
+        CoordinatesResponse response = coordinatesMapper.toCoordinatesResponse(saved);
+        entityChangeNotifier.publish("COORDINATES", "CREATED", response);
+        return response;
     }
 
     public CoordinatesResponse update(Long id, CoordinatesUpdateRequest request) {
@@ -67,7 +72,9 @@ public class CoordinatesService {
 
         coordinatesMapper.updateWithNull(request, coordinates);
         Coordinates saved = coordinatesRepository.save(coordinates);
-        return coordinatesMapper.toCoordinatesResponse(saved);
+        CoordinatesResponse response = coordinatesMapper.toCoordinatesResponse(saved);
+        entityChangeNotifier.publish("COORDINATES", "UPDATED", response);
+        return response;
     }
 
     public List<CoordinatesResponse> updateMany(List<Long> ids, CoordinatesUpdateRequest request) {
@@ -83,14 +90,23 @@ public class CoordinatesService {
         }
 
         List<Coordinates> saved = coordinatesRepository.saveAll(coordinates);
-        return saved.stream().map(coordinatesMapper::toCoordinatesResponse).toList();
+        List<CoordinatesResponse> responses = saved.stream()
+                .map(coordinatesMapper::toCoordinatesResponse)
+                .toList();
+        responses.forEach(response -> entityChangeNotifier.publish("COORDINATES", "UPDATED", response));
+        return responses;
     }
 
     public CoordinatesResponse delete(Long id) {
-        Coordinates coordinates = coordinatesRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Сущность с идентификатором %d не найдена".formatted(id)));
+        Coordinates coordinates = coordinatesRepository.findById(id).orElse(null);
+        if (coordinates == null) {
+            entityChangeNotifier.publish("COORDINATES", "DELETED", new DeletedPayload(id));
+            return null;
+        }
         coordinatesRepository.delete(coordinates);
-        return coordinatesMapper.toCoordinatesResponse(coordinates);
+        CoordinatesResponse response = coordinatesMapper.toCoordinatesResponse(coordinates);
+        entityChangeNotifier.publish("COORDINATES", "DELETED", response);
+        return response;
     }
 
     public void deleteMany(List<Long> ids) {
@@ -99,8 +115,14 @@ public class CoordinatesService {
         }
         Collection<Coordinates> coordinates = coordinatesRepository.findAllById(ids);
         validateAllIdsPresent(ids, coordinates);
+        List<CoordinatesResponse> responses = coordinates.stream()
+                .map(coordinatesMapper::toCoordinatesResponse)
+                .toList();
         coordinatesRepository.deleteAll(coordinates);
+        responses.forEach(response -> entityChangeNotifier.publish("COORDINATES", "DELETED", response));
     }
+
+    private record DeletedPayload(Long id) {}
 
     private Pageable applySorting(Pageable pageable, String sortBy, Sort.Direction direction) {
         String sortField = Objects.requireNonNullElse(sortBy, "id");

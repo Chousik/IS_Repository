@@ -61,7 +61,11 @@ public class CoordinatesController implements CoordinatesApi {
     @Override
     public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdDelete(
             @NotNull @PathVariable("id") Long id) {
-        return ResponseEntity.ok(coordinatesService.delete(id));
+        CoordinatesResponse response = coordinatesService.delete(id);
+        if (response == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(response);
     }
 
     @Override
@@ -81,7 +85,8 @@ public class CoordinatesController implements CoordinatesApi {
     public ResponseEntity<List<CoordinatesResponse>> apiV1CoordinatesPatch(
             @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids,
             @Valid @RequestBody CoordinatesUpdateRequest coordinatesUpdateRequest) {
-        return ResponseEntity.ok(coordinatesService.updateMany(ids, coordinatesUpdateRequest));
+        List<CoordinatesResponse> responses = coordinatesService.updateMany(ids, coordinatesUpdateRequest);
+        return ResponseEntity.ok(responses);
     }
 
     @Override

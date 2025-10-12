@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Semester,
   StudyGroupExpelledTotalResponse,
@@ -7,6 +7,7 @@ import {
 } from '../api/models';
 import { studyGroupsApi } from '../apiClient';
 import { loadAllStudyGroups } from '../services/entityLoaders';
+import { subscribeToEntityChanges } from '../services/events';
 
 const semesterOptions: Semester[] = ['FIRST', 'SECOND', 'FOURTH', 'SIXTH', 'SEVENTH'];
 
@@ -23,18 +24,27 @@ const SpecialOperationsPage = () => {
   const setLoading = (key: string, value: boolean) =>
     setLoadingState((prev) => ({ ...prev, [key]: value }));
 
-  const refreshGroups = async () => {
+  const refreshGroups = useCallback(async () => {
     try {
       const groups = await loadAllStudyGroups();
       setStudyGroups(groups);
     } catch (err: any) {
       console.error(err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refreshGroups();
-  }, []);
+  }, [refreshGroups]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToEntityChanges((change) => {
+      if (change.entity === 'STUDY_GROUP') {
+        refreshGroups();
+      }
+    });
+    return unsubscribe;
+  }, [refreshGroups]);
 
   const handleDeleteAll = async () => {
     setLoading('deleteAll', true);

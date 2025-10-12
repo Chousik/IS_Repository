@@ -61,7 +61,11 @@ public class LocationController implements LocationsApi {
     @Override
     public ResponseEntity<LocationResponse> apiV1LocationsIdDelete(
             @NotNull @PathVariable("id") Long id) {
-        return ResponseEntity.ok(locationService.delete(id));
+        LocationResponse response = locationService.delete(id);
+        if (response == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(response);
     }
 
     @Override

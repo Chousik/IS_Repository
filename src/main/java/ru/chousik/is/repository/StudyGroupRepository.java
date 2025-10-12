@@ -12,7 +12,7 @@ import java.util.Optional;
 @Repository
 public interface StudyGroupRepository extends JpaRepository<StudyGroup, Long> {
 
-    long deleteBySemesterEnum(Semester semesterEnum);
+    List<StudyGroup> findAllBySemesterEnum(Semester semesterEnum);
 
     Optional<StudyGroup> findFirstBySemesterEnum(Semester semesterEnum);
 

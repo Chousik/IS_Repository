@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { locationsApi, personsApi } from '../apiClient';
 import type {
   LocationAddRequest,
@@ -7,6 +7,7 @@ import type {
   PersonResponse,
 } from '../api/models';
 import { loadAllLocations, loadAllPersons } from '../services/entityLoaders';
+import { subscribeToEntityChanges } from '../services/events';
 import Modal from '../components/Modal';
 
 const PAGE_SIZE = 10;
@@ -22,7 +23,7 @@ const LocationsPage = () => {
   const [deleteContext, setDeleteContext] = useState<{ location: LocationResponse; personIds: number[] } | null>(null);
   const [replacementId, setReplacementId] = useState<number | ''>('');
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     try {
       setLoading(true);
       const [locs, people] = await Promise.all([loadAllLocations(), loadAllPersons()]);
@@ -34,13 +35,20 @@ const LocationsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refreshData();
-    const interval = setInterval(refreshData, 7000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [refreshData]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToEntityChanges((change) => {
+      if (change.entity === 'LOCATION' || change.entity === 'PERSON') {
+        refreshData();
+      }
+    });
+    return unsubscribe;
+  }, [refreshData]);
 
   const maxPage = Math.max(1, Math.ceil(locations.length / PAGE_SIZE));
   const currentPage = Math.min(page, maxPage);

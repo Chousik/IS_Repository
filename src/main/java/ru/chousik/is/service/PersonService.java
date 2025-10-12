@@ -15,6 +15,7 @@ import ru.chousik.is.dto.request.PersonUpdateRequest;
 import ru.chousik.is.dto.response.PersonResponse;
 import ru.chousik.is.entity.Location;
 import ru.chousik.is.entity.Person;
+import ru.chousik.is.event.EntityChangeNotifier;
 import ru.chousik.is.exception.BadRequestException;
 import ru.chousik.is.exception.NotFoundException;
 import ru.chousik.is.repository.LocationRepository;
@@ -34,6 +35,7 @@ public class PersonService {
     private final LocationRepository locationRepository;
     private final PersonMapper personMapper;
     private final LocationMapper locationMapper;
+    private final EntityChangeNotifier entityChangeNotifier;
 
     public Page<PersonResponse> getAll(Pageable pageable, String sortBy, Sort.Direction direction) {
         Pageable sortedPageable = applySorting(pageable, sortBy, direction);
@@ -73,7 +75,9 @@ public class PersonService {
                 .build();
 
         Person saved = personRepository.save(person);
-        return personMapper.toPersonResponse(saved);
+        PersonResponse response = personMapper.toPersonResponse(saved);
+        entityChangeNotifier.publish("PERSON", "CREATED", response);
+        return response;
     }
 
     public PersonResponse update(Long id, PersonUpdateRequest request) {
@@ -85,7 +89,9 @@ public class PersonService {
         applyUpdates(person, request);
 
         Person saved = personRepository.save(person);
-        return personMapper.toPersonResponse(saved);
+        PersonResponse response = personMapper.toPersonResponse(saved);
+        entityChangeNotifier.publish("PERSON", "UPDATED", response);
+        return response;
     }
 
     public List<PersonResponse> updateMany(List<Long> ids, PersonUpdateRequest request) {
@@ -107,14 +113,21 @@ public class PersonService {
         }
 
         List<Person> saved = personRepository.saveAll(people);
-        return saved.stream().map(personMapper::toPersonResponse).toList();
+        List<PersonResponse> responses = saved.stream().map(personMapper::toPersonResponse).toList();
+        responses.forEach(response -> entityChangeNotifier.publish("PERSON", "UPDATED", response));
+        return responses;
     }
 
     public PersonResponse delete(Long id) {
-        Person person = personRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Человек с идентификатором %d не найден".formatted(id)));
+        Person person = personRepository.findById(id).orElse(null);
+        if (person == null) {
+            entityChangeNotifier.publish("PERSON", "DELETED", new DeletedPayload(id));
+            return null;
+        }
         personRepository.delete(person);
-        return personMapper.toPersonResponse(person);
+        PersonResponse response = personMapper.toPersonResponse(person);
+        entityChangeNotifier.publish("PERSON", "DELETED", response);
+        return response;
     }
 
     public void deleteMany(List<Long> ids) {
@@ -123,8 +136,12 @@ public class PersonService {
         }
         Collection<Person> people = personRepository.findAllById(ids);
         validateAllIdsPresent(ids, people);
+        List<PersonResponse> responses = people.stream().map(personMapper::toPersonResponse).toList();
         personRepository.deleteAll(people);
+        responses.forEach(response -> entityChangeNotifier.publish("PERSON", "DELETED", response));
     }
+
+    private record DeletedPayload(Long id) {}
 
     private void applyUpdates(Person person, PersonUpdateRequest request) {
         applyUpdates(person, request, request.locationId() != null ? resolveExistingLocation(request.locationId()) : null);

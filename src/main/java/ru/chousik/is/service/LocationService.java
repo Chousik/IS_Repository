@@ -12,6 +12,7 @@ import ru.chousik.is.dto.request.LocationAddRequest;
 import ru.chousik.is.dto.request.LocationUpdateRequest;
 import ru.chousik.is.dto.response.LocationResponse;
 import ru.chousik.is.entity.Location;
+import ru.chousik.is.event.EntityChangeNotifier;
 import ru.chousik.is.exception.BadRequestException;
 import ru.chousik.is.exception.NotFoundException;
 import ru.chousik.is.repository.LocationRepository;
@@ -28,6 +29,7 @@ public class LocationService {
 
     private final LocationRepository locationRepository;
     private final LocationMapper locationMapper;
+    private final EntityChangeNotifier entityChangeNotifier;
 
     public Page<LocationResponse> getAll(Pageable pageable, String sortBy, Sort.Direction direction) {
         Pageable sortedPageable = applySorting(pageable, sortBy, direction);
@@ -54,7 +56,9 @@ public class LocationService {
     public LocationResponse create(LocationAddRequest request) {
         Location location = locationMapper.toEntity(request);
         Location saved = locationRepository.save(location);
-        return locationMapper.toLocationResponse(saved);
+        LocationResponse response = locationMapper.toLocationResponse(saved);
+        entityChangeNotifier.publish("LOCATION", "CREATED", response);
+        return response;
     }
 
     public LocationResponse update(Long id, LocationUpdateRequest request) {
@@ -65,7 +69,9 @@ public class LocationService {
 
         locationMapper.updateWithNull(request, location);
         Location saved = locationRepository.save(location);
-        return locationMapper.toLocationResponse(saved);
+        LocationResponse response = locationMapper.toLocationResponse(saved);
+        entityChangeNotifier.publish("LOCATION", "UPDATED", response);
+        return response;
     }
 
     public List<LocationResponse> updateMany(List<Long> ids, LocationUpdateRequest request) {
@@ -82,14 +88,23 @@ public class LocationService {
         }
 
         List<Location> saved = locationRepository.saveAll(locations);
-        return saved.stream().map(locationMapper::toLocationResponse).toList();
+        List<LocationResponse> responses = saved.stream()
+                .map(locationMapper::toLocationResponse)
+                .toList();
+        responses.forEach(response -> entityChangeNotifier.publish("LOCATION", "UPDATED", response));
+        return responses;
     }
 
     public LocationResponse delete(Long id) {
-        Location location = locationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Локация с идентификатором %d не найдена".formatted(id)));
+        Location location = locationRepository.findById(id).orElse(null);
+        if (location == null) {
+            entityChangeNotifier.publish("LOCATION", "DELETED", new DeletedPayload(id));
+            return null;
+        }
         locationRepository.delete(location);
-        return locationMapper.toLocationResponse(location);
+        LocationResponse response = locationMapper.toLocationResponse(location);
+        entityChangeNotifier.publish("LOCATION", "DELETED", response);
+        return response;
     }
 
     public void deleteMany(List<Long> ids) {
@@ -98,8 +113,14 @@ public class LocationService {
         }
         Collection<Location> locations = locationRepository.findAllById(ids);
         validateAllIdsPresent(ids, locations);
+        List<LocationResponse> responses = locations.stream()
+                .map(locationMapper::toLocationResponse)
+                .toList();
         locationRepository.deleteAll(locations);
+        responses.forEach(response -> entityChangeNotifier.publish("LOCATION", "DELETED", response));
     }
+
+    private record DeletedPayload(Long id) {}
 
     private Pageable applySorting(Pageable pageable, String sortBy, Sort.Direction direction) {
         String sortField = Objects.requireNonNullElse(sortBy, "id");

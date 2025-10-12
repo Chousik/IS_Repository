@@ -52,6 +52,7 @@ dependencies {
     // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-devtools
     implementation("org.springframework.boot:spring-boot-devtools:3.5.0")
     implementation("io.swagger.core.v3:swagger-annotations:2.2.22")
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
 }
 
 tasks.withType<Test> {

@@ -6,8 +6,13 @@ import type {
   StudyGroupResponse,
 } from '../api/models';
 import { mapPageModel } from '../utils/pagination';
+import { ResponseError, FetchError } from '../api/runtime';
 
 const PAGE_SIZE = 100;
+
+function isResponseError(error: unknown): error is { response: Response } {
+  return typeof error === 'object' && error !== null && 'response' in error;
+}
 
 async function loadPaged<T>(fetcher: (page: number) => Promise<any>): Promise<T[]> {
   const result: T[] = [];
@@ -17,6 +22,36 @@ async function loadPaged<T>(fetcher: (page: number) => Promise<any>): Promise<T[
     try {
       response = await fetcher(page);
     } catch (error) {
+      if (isResponseError(error)) {
+        const status = (error as any).response?.status;
+        if (status === 404 || status === 400 || status === 204) {
+          break;
+        }
+        let body = '';
+        try {
+          body = await (error as any).response.text();
+        } catch (e) {
+          body = '';
+        }
+        throw new Error(`Не удалось получить данные страницы ${page + 1}: ${status ?? 'unknown status'} ${body}`.trim());
+      }
+      if (error instanceof ResponseError && error.response) {
+        const status = error.response.status;
+        if (status === 404 || status === 400 || status === 204) {
+          break;
+        }
+        let body = '';
+        try {
+          body = await error.response.text();
+        } catch (e) {
+          body = '';
+        }
+        throw new Error(`Не удалось получить данные страницы ${page + 1}: ${status} ${body}`.trim());
+      }
+      if (error instanceof FetchError) {
+        const causeMessage = error.cause?.message ?? error.message;
+        throw new Error(`Не удалось подключиться к серверу. ${causeMessage}`.trim());
+      }
       throw new Error(`Не удалось получить данные страницы ${page + 1}: ${(error as Error).message}`);
     }
     const mapped = mapPageModel<T>(response, PAGE_SIZE);

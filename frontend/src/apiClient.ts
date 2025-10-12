@@ -6,7 +6,12 @@ import {
   StudyGroupsApi,
 } from './api/apis';
 
-const defaultBase = typeof window !== 'undefined' ? window.location.origin : '';
+let defaultBase = '';
+if (typeof window !== 'undefined') {
+  if (process.env.NODE_ENV !== 'development') {
+    defaultBase = window.location.origin;
+  }
+}
 const basePath = process.env.REACT_APP_API_BASE && process.env.REACT_APP_API_BASE.length > 0
   ? process.env.REACT_APP_API_BASE
   : defaultBase;
