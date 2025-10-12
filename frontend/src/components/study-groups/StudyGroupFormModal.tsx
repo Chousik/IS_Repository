@@ -481,13 +481,13 @@ const StudyGroupFormModal = ({
         </div>
 
         <div className="form-field">
-          <label>Администратор</label>
+          <label>Куратор</label>
           <select
             className="select"
             value={state.adminMode}
             onChange={(event) => onChange('adminMode', event.target.value as AdminMode)}
           >
-            <option value="none">Без администратора</option>
+            <option value="none">Без куратора</option>
             <option value="existing">Существующий</option>
             <option value="new">Новый</option>
           </select>
@@ -500,7 +500,7 @@ const StudyGroupFormModal = ({
               }
               required
             >
-              <option value="">Выберите администратора</option>
+              <option value="">Выберите куратора</option>
               {personsOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -512,9 +512,9 @@ const StudyGroupFormModal = ({
 
         {state.adminMode === 'new' && state.admin && (
           <div className="form-field full-width">
-            <div className="form-grid">
+            <div className="form-grid single-column">
               <div className="form-field">
-                <label>Имя администратора</label>
+                <label>Имя куратора</label>
                 <input
                   className="input"
                   value={state.admin.name}
@@ -639,7 +639,7 @@ const StudyGroupFormModal = ({
                 </select>
               </div>
               <div className="form-field">
-                <label>Локация администратора</label>
+                <label>Локация куратора</label>
                 <select
                   className="select"
                   value={state.admin.locationMode}

@@ -212,7 +212,7 @@ const StudyGroupsPage = () => {
               <th onClick={() => handleSortToggle('transferredStudents')} style={{ cursor: 'pointer' }}>
                 Переведено {sortIndicator(paging.sortField, paging.sortOrder, 'transferredStudents')}
               </th>
-              <th>Администратор</th>
+              <th>Куратор</th>
               <th onClick={() => handleSortToggle('creationDate')} style={{ cursor: 'pointer' }}>
                 Создано {sortIndicator(paging.sortField, paging.sortOrder, 'creationDate')}
               </th>
@@ -299,7 +299,7 @@ const StudyGroupsPage = () => {
           <div className="drawer-field"><strong>Переведено:</strong> {selectedGroup.transferredStudents}</div>
           <div className="drawer-field"><strong>Должны быть отчислены:</strong> {selectedGroup.shouldBeExpelled}</div>
           <div className="drawer-field"><strong>Средний балл:</strong> {selectedGroup.averageMark ?? '—'}</div>
-          <div className="drawer-field"><strong>Администратор:</strong> {selectedGroup.groupAdmin?.name ?? '—'}</div>
+          <div className="drawer-field"><strong>Куратор:</strong> {selectedGroup.groupAdmin?.name ?? '—'}</div>
           <div className="drawer-field"><strong>Создано:</strong> {formatDateTime(selectedGroup.creationDate)}</div>
           <button className="primary-btn" onClick={() => openEditModal(selectedGroup)}>Редактировать</button>
         </div>

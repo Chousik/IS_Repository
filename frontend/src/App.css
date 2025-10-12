@@ -215,6 +215,14 @@
   gap: 16px;
 }
 
+.form-grid.single-column {
+  grid-template-columns: 1fr;
+}
+
+.form-grid .modal-footer {
+  grid-column: 1 / -1;
+}
+
 .full-width {
   grid-column: 1 / -1;
 }
@@ -237,9 +245,6 @@
   border-radius: 6px;
   border: 1px solid #cbd5f5;
   font-size: 14px;
-}
-
-.number-input {
   width: 100%;
 }
 

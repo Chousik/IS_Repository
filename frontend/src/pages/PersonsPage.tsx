@@ -111,7 +111,7 @@ const PersonsPage = () => {
       setCreateLocationMode('none');
       await refreshData();
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось создать администратора');
+      alert(err?.message ?? 'Не удалось создать куратора');
     }
   };
 
@@ -153,7 +153,7 @@ const PersonsPage = () => {
       setEditLocationMode('none');
       await refreshData();
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось обновить администратора');
+      alert(err?.message ?? 'Не удалось обновить куратора');
     }
   };
 
@@ -163,11 +163,11 @@ const PersonsPage = () => {
       .map((g) => g.id)
       .filter(Boolean);
     if (affected.length === 0) {
-      if (window.confirm('Удалить администратора?')) {
+      if (window.confirm('Удалить куратора?')) {
         personsApi
           .apiV1PersonsIdDelete({ id: person.id! })
           .then(refreshData)
-          .catch((err) => alert(err?.message ?? 'Не удалось удалить администратора'));
+          .catch((err) => alert(err?.message ?? 'Не удалось удалить куратора'));
       }
       return;
     }
@@ -177,7 +177,7 @@ const PersonsPage = () => {
 
   const confirmDeleteWithReplacement = async () => {
     if (!deleteContext?.person.id || replacementId === '') {
-      alert('Выберите администратора для переназначения');
+      alert('Выберите куратора для переназначения');
       return;
     }
     try {
@@ -194,7 +194,7 @@ const PersonsPage = () => {
       setReplacementId('');
       await refreshData();
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось переназначить администратора');
+      alert(err?.message ?? 'Не удалось переназначить куратора');
     }
   };
 
@@ -215,7 +215,7 @@ const PersonsPage = () => {
     onSubmit: (event: FormEvent<HTMLFormElement>) => void,
     onCancel: () => void
   ) => (
-    <form className="form-grid" onSubmit={onSubmit}>
+    <form className="form-grid single-column" onSubmit={onSubmit}>
       <div className="form-field">
         <label>ФИО</label>
         <input className="input" name="name" defaultValue={person?.name} required />
@@ -281,19 +281,19 @@ const PersonsPage = () => {
       )}
       {locationMode === 'new' && (
         <>
-          <div className="form-field">
+          <div className="form-field full-width">
             <label>Название локации</label>
             <input className="input" name="locationName" defaultValue={person?.location?.name ?? ''} required />
           </div>
-          <div className="form-field">
+          <div className="form-field full-width">
             <label>Координата X</label>
             <input className="number-input" name="locationX" type="number" defaultValue={person?.location?.x ?? ''} required />
           </div>
-          <div className="form-field">
+          <div className="form-field full-width">
             <label>Координата Y</label>
             <input className="number-input" name="locationY" type="number" defaultValue={person?.location?.y ?? ''} required />
           </div>
-          <div className="form-field">
+          <div className="form-field full-width">
             <label>Координата Z</label>
             <input className="number-input" name="locationZ" type="number" defaultValue={person?.location?.z ?? ''} required />
           </div>
@@ -309,7 +309,7 @@ const PersonsPage = () => {
   return (
     <div>
       <div className="section-heading">
-        <h2>Администраторы</h2>
+        <h2>Люди</h2>
         <button
           className="primary-btn"
           onClick={() => {
@@ -379,7 +379,7 @@ const PersonsPage = () => {
 
       <Modal
         open={createOpen}
-        title="Создание администратора"
+        title="Создание человека"
         onClose={() => {
           setCreateOpen(false);
           setCreateLocationMode('none');
@@ -400,7 +400,7 @@ const PersonsPage = () => {
 
       <Modal
         open={!!editPerson}
-        title="Редактирование администратора"
+        title="Редактирование куратора"
         onClose={() => {
           setEditPerson(null);
           setEditLocationMode('none');
@@ -421,7 +421,7 @@ const PersonsPage = () => {
 
       <Modal
         open={!!deleteContext}
-        title="Переназначение администратора"
+        title="Переназначение куратора"
         onClose={() => {
           setDeleteContext(null);
           setReplacementId('');
@@ -429,17 +429,17 @@ const PersonsPage = () => {
         footer={null}
       >
         {deleteContext && (
-          <form className="form-grid" onSubmit={(event) => { event.preventDefault(); confirmDeleteWithReplacement(); }}>
-            <p>Администратор закреплён за {deleteContext.groupIds.length} учебными группами. Выберите замену.</p>
+          <form className="form-grid single-column" onSubmit={(event) => { event.preventDefault(); confirmDeleteWithReplacement(); }}>
+            <p>Куратор закреплён за {deleteContext.groupIds.length} учебными группами. Выберите замену.</p>
             <div className="form-field">
-              <label>Новый администратор</label>
+              <label>Новый куратор</label>
               <select
                 className="select"
                 value={replacementId}
                 onChange={(event) => setReplacementId(event.target.value ? Number(event.target.value) : '')}
                 required
               >
-                <option value="">Выберите администратора</option>
+                <option value="">Выберите куратора</option>
                 {replacementOptions.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
