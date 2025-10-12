@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import jakarta.annotation.Generated;
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2025-10-12T18:03:55.081030+03:00[Europe/Moscow]", comments = "Generator version: 7.16.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2025-10-12T18:08:29.283737+03:00[Europe/Moscow]", comments = "Generator version: 7.16.0")
 @Validated
 @Tag(name = "Locations", description = "the Locations API")
 public interface LocationsApi {

@@ -3,10 +3,14 @@ package ru.chousik.is.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PagedModel;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import ru.chousik.is.api.StudyGroupsApi;
 import ru.chousik.is.dto.request.StudyGroupAddRequest;
 import ru.chousik.is.dto.request.StudyGroupUpdateRequest;
 import ru.chousik.is.dto.response.StudyGroupExpelledTotalResponse;
@@ -19,79 +23,101 @@ import ru.chousik.is.service.StudyGroupService;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/study-groups")
+@RequestMapping
 @RequiredArgsConstructor
-public class StudyGroupController {
+public class StudyGroupController implements StudyGroupsApi {
+
+    private static final int DEFAULT_PAGE = 0;
+    private static final int DEFAULT_SIZE = 20;
 
     private final StudyGroupService studyGroupService;
 
-    @GetMapping
-    public PagedModel<StudyGroupResponse> getAll(Pageable pageable,
-                                                 @RequestParam(required = false) String sortBy,
-                                                 @RequestParam(required = false, defaultValue = "asc") String direction) {
-        Sort.Direction sortDirection = resolveDirection(direction);
-        Page<StudyGroupResponse> studyGroups = studyGroupService.getAll(pageable, sortBy, sortDirection);
-        return new PagedModel<>(studyGroups);
+    @Override
+    public ResponseEntity<List<StudyGroupResponse>> apiV1StudyGroupsByIdsGet(List<Long> ids) {
+        return ResponseEntity.ok(studyGroupService.getByIds(ids));
     }
 
-    @GetMapping("/{id}")
-    public StudyGroupResponse getOne(@PathVariable Long id) {
-        return studyGroupService.getById(id);
+    @Override
+    public ResponseEntity<Long> apiV1StudyGroupsBySemesterDelete(Semester semesterEnum) {
+        long deleted = studyGroupService.deleteAllBySemester(semesterEnum);
+        return ResponseEntity.ok(deleted);
     }
 
-    @GetMapping("/by-ids")
-    public List<StudyGroupResponse> getMany(@RequestParam List<Long> ids) {
-        return studyGroupService.getByIds(ids);
+    @Override
+    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsBySemesterOneDelete(Semester semesterEnum) {
+        return ResponseEntity.ok(studyGroupService.deleteOneBySemester(semesterEnum));
     }
 
-    @PostMapping
-    public StudyGroupResponse create(@RequestBody @Valid StudyGroupAddRequest request) {
-        return studyGroupService.create(request);
-    }
-
-    @PatchMapping("/{id}")
-    public StudyGroupResponse patch(@PathVariable Long id, @RequestBody @Valid StudyGroupUpdateRequest request) {
-        return studyGroupService.update(id, request);
-    }
-
-    @PatchMapping
-    public List<StudyGroupResponse> patchMany(@RequestParam List<Long> ids,
-                                              @RequestBody @Valid StudyGroupUpdateRequest request) {
-        return studyGroupService.updateMany(ids, request);
-    }
-
-    @DeleteMapping("/{id}")
-    public StudyGroupResponse delete(@PathVariable Long id) {
-        return studyGroupService.delete(id);
-    }
-
-    @DeleteMapping
-    public void deleteMany(@RequestParam List<Long> ids) {
+    @Override
+    public ResponseEntity<Void> apiV1StudyGroupsDelete(List<Long> ids) {
         studyGroupService.deleteMany(ids);
+        return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/by-semester")
-    public long deleteAllBySemester(@RequestParam Semester semesterEnum) {
-        return studyGroupService.deleteAllBySemester(semesterEnum);
+    @Override
+    @SuppressWarnings("rawtypes")
+    public ResponseEntity<PagedModel> apiV1StudyGroupsGet(Integer page, Integer size, String sort,
+                                                          String sortBy, String direction) {
+        Pageable pageable = toPageable(page, size);
+        Sort.Direction sortDirection = resolveDirection(direction);
+        String sortField = resolveSortField(sortBy, sort);
+        Page<StudyGroupResponse> studyGroups = studyGroupService.getAll(pageable, sortField, sortDirection);
+        PagedModel<StudyGroupResponse> body = new PagedModel<>(studyGroups);
+        return ResponseEntity.ok((PagedModel) body);
     }
 
-    @DeleteMapping("/by-semester/one")
-    public StudyGroupResponse deleteOneBySemester(@RequestParam Semester semesterEnum) {
-        return studyGroupService.deleteOneBySemester(semesterEnum);
+    @Override
+    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdDelete(Long id) {
+        return ResponseEntity.ok(studyGroupService.delete(id));
     }
 
-    @GetMapping("/stats/should-be-expelled")
-    public List<StudyGroupShouldBeExpelledGroupResponse> groupByShouldBeExpelled() {
-        return studyGroupService.groupByShouldBeExpelled();
+    @Override
+    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdGet(Long id) {
+        return ResponseEntity.ok(studyGroupService.getById(id));
     }
 
-    @GetMapping("/stats/expelled-total")
-    public StudyGroupExpelledTotalResponse totalExpelledStudents() {
-        return studyGroupService.totalExpelledStudents();
+    @Override
+    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdPatch(Long id,
+                                                                     @Valid StudyGroupUpdateRequest studyGroupUpdateRequest) {
+        return ResponseEntity.ok(studyGroupService.update(id, studyGroupUpdateRequest));
+    }
+
+    @Override
+    public ResponseEntity<List<StudyGroupResponse>> apiV1StudyGroupsPatch(List<Long> ids,
+                                                                          @Valid StudyGroupUpdateRequest studyGroupUpdateRequest) {
+        return ResponseEntity.ok(studyGroupService.updateMany(ids, studyGroupUpdateRequest));
+    }
+
+    @Override
+    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsPost(@Valid StudyGroupAddRequest studyGroupAddRequest) {
+        return ResponseEntity.ok(studyGroupService.create(studyGroupAddRequest));
+    }
+
+    @Override
+    public ResponseEntity<List<StudyGroupShouldBeExpelledGroupResponse>> apiV1StudyGroupsStatsShouldBeExpelledGet() {
+        return ResponseEntity.ok(studyGroupService.groupByShouldBeExpelled());
+    }
+
+    @Override
+    public ResponseEntity<StudyGroupExpelledTotalResponse> apiV1StudyGroupsStatsExpelledTotalGet() {
+        return ResponseEntity.ok(studyGroupService.totalExpelledStudents());
+    }
+
+    private Pageable toPageable(Integer page, Integer size) {
+        int pageNumber = page == null ? DEFAULT_PAGE : page;
+        int pageSize = size == null ? DEFAULT_SIZE : size;
+        return PageRequest.of(pageNumber, pageSize);
+    }
+
+    private String resolveSortField(String sortBy, String sort) {
+        if (sortBy != null && !sortBy.isBlank()) {
+            return sortBy;
+        }
+        return (sort != null && !sort.isBlank()) ? sort : null;
     }
 
     private Sort.Direction resolveDirection(String direction) {
-        if (direction == null) {
+        if (direction == null || direction.isBlank()) {
             return Sort.Direction.ASC;
         }
         try {

@@ -51,6 +51,7 @@ dependencies {
     implementation("com.nimbusds:nimbus-jose-jwt:10.3.1")
     // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-devtools
     implementation("org.springframework.boot:spring-boot-devtools:3.5.0")
+    implementation("io.swagger.core.v3:swagger-annotations:2.2.22")
 }
 
 tasks.withType<Test> {
