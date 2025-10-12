@@ -9,7 +9,10 @@ import org.springframework.data.web.PagedModel;
 import org.springframework.web.bind.annotation.*;
 import ru.chousik.is.dto.request.StudyGroupAddRequest;
 import ru.chousik.is.dto.request.StudyGroupUpdateRequest;
+import ru.chousik.is.dto.response.StudyGroupExpelledTotalResponse;
 import ru.chousik.is.dto.response.StudyGroupResponse;
+import ru.chousik.is.dto.response.StudyGroupShouldBeExpelledGroupResponse;
+import ru.chousik.is.entity.Semester;
 import ru.chousik.is.exception.BadRequestException;
 import ru.chousik.is.service.StudyGroupService;
 
@@ -65,6 +68,26 @@ public class StudyGroupController {
     @DeleteMapping
     public void deleteMany(@RequestParam List<Long> ids) {
         studyGroupService.deleteMany(ids);
+    }
+
+    @DeleteMapping("/by-semester")
+    public long deleteAllBySemester(@RequestParam Semester semesterEnum) {
+        return studyGroupService.deleteAllBySemester(semesterEnum);
+    }
+
+    @DeleteMapping("/by-semester/one")
+    public StudyGroupResponse deleteOneBySemester(@RequestParam Semester semesterEnum) {
+        return studyGroupService.deleteOneBySemester(semesterEnum);
+    }
+
+    @GetMapping("/stats/should-be-expelled")
+    public List<StudyGroupShouldBeExpelledGroupResponse> groupByShouldBeExpelled() {
+        return studyGroupService.groupByShouldBeExpelled();
+    }
+
+    @GetMapping("/stats/expelled-total")
+    public StudyGroupExpelledTotalResponse totalExpelledStudents() {
+        return studyGroupService.totalExpelledStudents();
     }
 
     private Sort.Direction resolveDirection(String direction) {

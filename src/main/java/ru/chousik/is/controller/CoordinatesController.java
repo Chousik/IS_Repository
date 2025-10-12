@@ -66,7 +66,7 @@ public class CoordinatesController {
         coordinatesService.deleteMany(ids);
     }
 
-    private Sort.Direction resolveDirection(String direction) {
+    private Sort.Direction resolveDirection( String direction) {
         if (direction == null) {
             return Sort.Direction.ASC;
         }

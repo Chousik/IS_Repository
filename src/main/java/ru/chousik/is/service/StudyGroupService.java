@@ -15,17 +15,21 @@ import ru.chousik.is.dto.request.LocationAddRequest;
 import ru.chousik.is.dto.request.PersonAddRequest;
 import ru.chousik.is.dto.request.StudyGroupAddRequest;
 import ru.chousik.is.dto.request.StudyGroupUpdateRequest;
+import ru.chousik.is.dto.response.StudyGroupExpelledTotalResponse;
 import ru.chousik.is.dto.response.StudyGroupResponse;
+import ru.chousik.is.dto.response.StudyGroupShouldBeExpelledGroupResponse;
 import ru.chousik.is.entity.Coordinates;
 import ru.chousik.is.entity.Location;
 import ru.chousik.is.entity.Person;
 import ru.chousik.is.entity.StudyGroup;
+import ru.chousik.is.entity.Semester;
 import ru.chousik.is.exception.BadRequestException;
 import ru.chousik.is.exception.NotFoundException;
 import ru.chousik.is.repository.CoordinatesRepository;
 import ru.chousik.is.repository.LocationRepository;
 import ru.chousik.is.repository.PersonRepository;
 import ru.chousik.is.repository.StudyGroupRepository;
+import ru.chousik.is.repository.StudyGroupRepository.ShouldBeExpelledGroupProjection;
 
 import java.util.Collection;
 import java.util.List;
@@ -148,6 +152,39 @@ public class StudyGroupService {
         Collection<StudyGroup> studyGroups = studyGroupRepository.findAllById(ids);
         validateAllIdsPresent(ids, studyGroups);
         studyGroupRepository.deleteAll(studyGroups);
+    }
+
+    public long deleteAllBySemester(Semester semesterEnum) {
+        if (semesterEnum == null) {
+            throw new BadRequestException("Не указан semesterEnum");
+        }
+        long deleted = studyGroupRepository.deleteBySemesterEnum(semesterEnum);
+        if (deleted == 0) {
+            throw new NotFoundException("Учебные группы с семестром %s не найдены".formatted(semesterEnum));
+        }
+        return deleted;
+    }
+
+    public StudyGroupResponse deleteOneBySemester(Semester semesterEnum) {
+        if (semesterEnum == null) {
+            throw new BadRequestException("Не указан semesterEnum");
+        }
+        StudyGroup studyGroup = studyGroupRepository.findFirstBySemesterEnum(semesterEnum)
+                .orElseThrow(() -> new NotFoundException("Учебные группы с семестром %s не найдены".formatted(semesterEnum)));
+        studyGroupRepository.delete(studyGroup);
+        return studyGroupMapper.toStudyGroupResponse(studyGroup);
+    }
+
+    public List<StudyGroupShouldBeExpelledGroupResponse> groupByShouldBeExpelled() {
+        List<ShouldBeExpelledGroupProjection> stats = studyGroupRepository.countGroupedByShouldBeExpelled();
+        return stats.stream()
+                .map(item -> new StudyGroupShouldBeExpelledGroupResponse(item.getShouldBeExpelled(), item.getTotal()))
+                .toList();
+    }
+
+    public StudyGroupExpelledTotalResponse totalExpelledStudents() {
+        Long total = studyGroupRepository.sumExpelledStudents();
+        return new StudyGroupExpelledTotalResponse(total == null ? 0 : total);
     }
 
     private void applyUpdates(StudyGroup studyGroup, StudyGroupUpdateRequest request) {
