@@ -227,6 +227,7 @@ const StudyGroupFormModal = ({
 }: StudyGroupFormModalProps) => {
   const [state, setState] = useState<GroupFormState>(buildInitialState(initialValues));
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -255,12 +256,13 @@ const StudyGroupFormModal = ({
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!state.semesterEnum) {
+      setFormError('Пожалуйста, выберите семестр');
+      return;
+    }
+    setFormError(null);
     setSubmitting(true);
     try {
-      if (!state.semesterEnum) {
-        alert('Пожалуйста, выберите семестр');
-        return;
-      }
       if (mode === 'create') {
         const payload = buildAddPayload(state);
         await onSubmit(payload);
@@ -284,6 +286,9 @@ const StudyGroupFormModal = ({
       footer={null}
     >
       <form onSubmit={handleSubmit} className="form-grid">
+        {formError && (
+          <div className="error-banner full-width">{formError}</div>
+        )}
         <div className="form-field full-width">
           <label htmlFor="group-name">Название</label>
           <input

@@ -12,6 +12,7 @@ import type {
 import { loadAllLocations, loadAllPersons, loadAllStudyGroups } from '../services/entityLoaders';
 import { subscribeToEntityChanges } from '../services/events';
 import Modal from '../components/Modal';
+import { useToast } from '../components/ToastProvider';
 
 const PAGE_SIZE = 10;
 const colorValues: Color[] = ['BLACK', 'YELLOW', 'ORANGE'];
@@ -26,6 +27,7 @@ const resolveLocationMode = (person?: PersonResponse | null): LocationMode => {
 };
 
 const PersonsPage = () => {
+  const { showToast } = useToast();
   const [persons, setPersons] = useState<PersonResponse[]>([]);
   const [locations, setLocations] = useState<LocationResponse[]>([]);
   const [studyGroups, setStudyGroups] = useState<StudyGroupResponse[]>([]);
@@ -36,6 +38,7 @@ const PersonsPage = () => {
   const [editPerson, setEditPerson] = useState<PersonResponse | null>(null);
   const [deleteContext, setDeleteContext] = useState<{ person: PersonResponse; groupIds: number[] } | null>(null);
   const [replacementId, setReplacementId] = useState<number | ''>('');
+  const [confirmDelete, setConfirmDelete] = useState<PersonResponse | null>(null);
   const [createLocationMode, setCreateLocationMode] = useState<LocationMode>('none');
   const [editLocationMode, setEditLocationMode] = useState<LocationMode>('none');
 
@@ -52,11 +55,13 @@ const PersonsPage = () => {
       setStudyGroups(groups);
       setError(null);
     } catch (err: any) {
-      setError(err?.message ?? 'Не удалось загрузить данные');
+      const message = err?.message ?? 'Не удалось загрузить данные';
+      setError(message);
+      showToast(message, 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     refreshData();
@@ -80,11 +85,11 @@ const PersonsPage = () => {
     const formData = new FormData(event.currentTarget);
     const locationMode = formData.get('locationMode');
     if (locationMode === 'existing' && !formData.get('locationId')) {
-      alert('Выберите локацию');
+      showToast('Выберите локацию для куратора', 'warning');
       return;
     }
     if (locationMode === 'new' && (!formData.get('locationName') || !formData.get('locationX') || !formData.get('locationY') || !formData.get('locationZ'))) {
-      alert('Заполните данные новой локации');
+      showToast('Заполните все поля новой локации', 'warning');
       return;
     }
     const payload: PersonAddRequest = {
@@ -110,8 +115,9 @@ const PersonsPage = () => {
       setCreateOpen(false);
       setCreateLocationMode('none');
       await refreshData();
+      showToast('Куратор создан', 'success');
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось создать куратора');
+      showToast(err?.message ?? 'Не удалось создать куратора', 'error');
     }
   };
 
@@ -121,11 +127,11 @@ const PersonsPage = () => {
     const formData = new FormData(event.currentTarget);
     const locationMode = formData.get('locationMode');
     if (locationMode === 'existing' && !formData.get('locationId')) {
-      alert('Выберите локацию');
+      showToast('Выберите локацию для куратора', 'warning');
       return;
     }
     if (locationMode === 'new' && (!formData.get('locationName') || !formData.get('locationX') || !formData.get('locationY') || !formData.get('locationZ'))) {
-      alert('Заполните данные новой локации');
+      showToast('Заполните все поля новой локации', 'warning');
       return;
     }
     const payload: PersonUpdateRequest = {
@@ -152,8 +158,9 @@ const PersonsPage = () => {
       setEditPerson(null);
       setEditLocationMode('none');
       await refreshData();
+      showToast('Данные куратора обновлены', 'success');
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось обновить куратора');
+      showToast(err?.message ?? 'Не удалось обновить куратора', 'error');
     }
   };
 
@@ -163,12 +170,7 @@ const PersonsPage = () => {
       .map((g) => g.id)
       .filter(Boolean);
     if (affected.length === 0) {
-      if (window.confirm('Удалить куратора?')) {
-        personsApi
-          .apiV1PersonsIdDelete({ id: person.id! })
-          .then(refreshData)
-          .catch((err) => alert(err?.message ?? 'Не удалось удалить куратора'));
-      }
+      setConfirmDelete(person);
       return;
     }
     setDeleteContext({ person, groupIds: affected });
@@ -177,7 +179,7 @@ const PersonsPage = () => {
 
   const confirmDeleteWithReplacement = async () => {
     if (!deleteContext?.person.id || replacementId === '') {
-      alert('Выберите куратора для переназначения');
+      showToast('Выберите куратора для переназначения', 'warning');
       return;
     }
     try {
@@ -193,8 +195,25 @@ const PersonsPage = () => {
       setDeleteContext(null);
       setReplacementId('');
       await refreshData();
+      showToast('Куратор удалён и замена назначена', 'success');
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось переназначить куратора');
+      showToast(err?.message ?? 'Не удалось переназначить куратора', 'error');
+    }
+  };
+
+  const confirmDeletePerson = async () => {
+    if (!confirmDelete?.id) {
+      setConfirmDelete(null);
+      return;
+    }
+    try {
+      await personsApi.apiV1PersonsIdDelete({ id: confirmDelete.id });
+      await refreshData();
+      showToast('Куратор удалён', 'success');
+    } catch (err: any) {
+      showToast(err?.message ?? 'Не удалось удалить куратора', 'error');
+    } finally {
+      setConfirmDelete(null);
     }
   };
 
@@ -349,7 +368,7 @@ const PersonsPage = () => {
         </button>
       </div>
 
-      {error && <div style={{ color: '#dc2626', marginBottom: 12 }}>{error}</div>}
+      {error && <div className="error-banner">{error}</div>}
 
       <div className="table-wrapper">
         <table>
@@ -480,6 +499,23 @@ const PersonsPage = () => {
             <div className="modal-footer">
               <button type="button" className="secondary-btn" onClick={() => setDeleteContext(null)}>Отмена</button>
               <button type="submit" className="danger-btn">Переназначить и удалить</button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!confirmDelete}
+        title="Удаление куратора"
+        onClose={() => setConfirmDelete(null)}
+        footer={null}
+      >
+        {confirmDelete && (
+          <form className="form-grid" onSubmit={(event) => { event.preventDefault(); confirmDeletePerson(); }}>
+            <p>Удалить куратора <strong>{confirmDelete.name}</strong>? Связанные учебные группы не затронуты.</p>
+            <div className="modal-footer">
+              <button type="button" className="secondary-btn" onClick={() => setConfirmDelete(null)}>Отмена</button>
+              <button type="submit" className="danger-btn">Удалить</button>
             </div>
           </form>
         )}

@@ -9,6 +9,8 @@ import { coordinatesApi, studyGroupsApi } from '../apiClient';
 import { mapPageModel, PagedResult } from '../utils/pagination';
 import { subscribeToEntityChanges, EntityChange } from '../services/events';
 import { loadAllCoordinates, loadAllStudyGroups } from '../services/entityLoaders';
+import Modal from '../components/Modal';
+import { useToast } from '../components/ToastProvider';
 
 const PAGE_SIZE = 10;
 
@@ -40,6 +42,8 @@ const CoordinatesPage = () => {
   const [editCoordinate, setEditCoordinate] = useState<CoordinatesResponse | null>(null);
   const [deleteContext, setDeleteContext] = useState<{ coordinate: CoordinatesResponse; groupIds: number[] } | null>(null);
   const [replacementId, setReplacementId] = useState<number | ''>('');
+  const [confirmDelete, setConfirmDelete] = useState<CoordinatesResponse | null>(null);
+  const { showToast } = useToast();
 
   const fetchPage = useCallback(async () => {
     setLoading(true);
@@ -53,11 +57,13 @@ const CoordinatesPage = () => {
       setPagedData(mapPageModel<CoordinatesResponse>(response, paging.size));
       setError(null);
     } catch (err: any) {
-      setError(err?.message ?? 'Не удалось загрузить координаты');
+      const message = err?.message ?? 'Не удалось загрузить координаты';
+      setError(message);
+      showToast(message, 'error');
     } finally {
       setLoading(false);
     }
-  }, [paging.page, paging.size, paging.sortField, paging.sortOrder]);
+  }, [paging.page, paging.size, paging.sortField, paging.sortOrder, showToast]);
 
   const fetchStudyGroups = useCallback(async () => {
     try {
@@ -123,8 +129,9 @@ const CoordinatesPage = () => {
       await coordinatesApi.apiV1CoordinatesPost({ coordinatesAddRequest: payload });
       setCreateOpen(false);
       await fetchPage();
+      showToast('Координаты созданы', 'success');
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось создать координаты');
+      showToast(err?.message ?? 'Не удалось создать координаты', 'error');
     }
   };
 
@@ -140,8 +147,9 @@ const CoordinatesPage = () => {
       await coordinatesApi.apiV1CoordinatesIdPatch({ id: editCoordinate.id, coordinatesUpdateRequest: payload });
       setEditCoordinate(null);
       await fetchPage();
+      showToast('Координаты обновлены', 'success');
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось обновить координаты');
+      showToast(err?.message ?? 'Не удалось обновить координаты', 'error');
     }
   };
 
@@ -151,11 +159,7 @@ const CoordinatesPage = () => {
       .map((g) => g.id!)
       .filter(Boolean);
     if (affected.length === 0) {
-      if (window.confirm('Удалить координаты?')) {
-        coordinatesApi.apiV1CoordinatesIdDelete({ id: coordinate.id })
-          .then(fetchPage)
-          .catch((err) => alert(err?.message ?? 'Не удалось удалить координаты'));
-      }
+      setConfirmDelete(coordinate);
       return;
     }
     setDeleteContext({ coordinate, groupIds: affected });
@@ -195,6 +199,22 @@ const CoordinatesPage = () => {
     return Array.from(unique.values()).map((coord) => ({ label: `#${coord.id} (${coord.x}; ${coord.y})`, value: coord.id! }));
   }, [allCoordinates, deleteContext]);
 
+  const confirmDeleteCoordinate = async () => {
+    if (!confirmDelete?.id) {
+      setConfirmDelete(null);
+      return;
+    }
+    try {
+      await coordinatesApi.apiV1CoordinatesIdDelete({ id: confirmDelete.id });
+      await fetchPage();
+      showToast('Координаты удалены', 'success');
+    } catch (err: any) {
+      showToast(err?.message ?? 'Не удалось удалить координаты', 'error');
+    } finally {
+      setConfirmDelete(null);
+    }
+  };
+
   return (
     <div>
       <div className="section-heading">
@@ -202,7 +222,7 @@ const CoordinatesPage = () => {
         <button className="primary-btn" onClick={() => setCreateOpen(true)}>Добавить</button>
       </div>
 
-      {error && <div style={{ color: '#dc2626', marginBottom: 12 }}>{error}</div>}
+      {error && <div className="error-banner">{error}</div>}
 
       <div className="table-wrapper">
         <table>
@@ -300,7 +320,7 @@ const CoordinatesPage = () => {
               }}
             >
               <p>
-                Координаты используются в {deleteContext.groupIds.length} учебных группах. Выберите другие координаты, чтобы переназначить их перед удалением.
+                Координаты используются в {deleteContext.groupIds.length} учебных группах. Выберите другие координаты перед удалением.
               </p>
               <div className="form-field">
                 <label>Новые координаты</label>
@@ -324,6 +344,23 @@ const CoordinatesPage = () => {
           )}
         </div>
       </div>
+
+      <Modal
+        open={!!confirmDelete}
+        title="Удаление координат"
+        onClose={() => setConfirmDelete(null)}
+        footer={null}
+      >
+        {confirmDelete && (
+          <form className="form-grid" onSubmit={(event) => { event.preventDefault(); confirmDeleteCoordinate(); }}>
+            <p>Удалить координаты <strong>#{confirmDelete.id}</strong> ({confirmDelete.x}; {confirmDelete.y})?</p>
+            <div className="modal-footer">
+              <button type="button" className="secondary-btn" onClick={() => setConfirmDelete(null)}>Отмена</button>
+              <button type="submit" className="danger-btn">Удалить</button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 };

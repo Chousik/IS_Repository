@@ -15,9 +15,11 @@ import {
   loadAllPersons,
 } from '../services/entityLoaders';
 import StudyGroupFormModal from '../components/study-groups/StudyGroupFormModal';
+import Modal from '../components/Modal';
 import { formatDateTime } from '../utils/strings';
 import { mapPageModel, PagedResult } from '../utils/pagination';
 import { subscribeToEntityChanges, EntityChange } from '../services/events';
+import { useToast } from '../components/ToastProvider';
 
 const PAGE_SIZE = 10;
 
@@ -56,6 +58,7 @@ function sortIndicator(field: string | undefined, order: SortOrder, target: stri
 }
 
 const StudyGroupsPage = () => {
+  const { showToast } = useToast();
   const [paging, setPaging] = useState<PagingState>({ page: 1, size: PAGE_SIZE, sortField: undefined, sortOrder: 'asc' });
   const [pagedData, setPagedData] = useState<PagedResult<StudyGroupResponse>>(initialPaged);
   const [loadingTable, setLoadingTable] = useState(false);
@@ -67,6 +70,7 @@ const StudyGroupsPage = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [editingGroup, setEditingGroup] = useState<StudyGroupResponse | undefined>(undefined);
+  const [confirmDelete, setConfirmDelete] = useState<StudyGroupResponse | null>(null);
 
   const fetchReferences = useCallback(async () => {
     try {
@@ -96,11 +100,13 @@ const StudyGroupsPage = () => {
       setPagedData(mapped);
       setTableError(null);
     } catch (error: any) {
-      setTableError(error?.message ?? 'Не удалось загрузить данные');
+      const message = error?.message ?? 'Не удалось загрузить данные';
+      setTableError(message);
+      showToast(message, 'error');
     } finally {
       setLoadingTable(false);
     }
-  }, [paging.page, paging.size, paging.sortField, paging.sortOrder]);
+  }, [paging.page, paging.size, paging.sortField, paging.sortOrder, showToast]);
 
   useEffect(() => {
     fetchPage();
@@ -154,15 +160,7 @@ const StudyGroupsPage = () => {
 
   const handleDelete = async (group: StudyGroupResponse) => {
     if (!group.id) return;
-    if (!window.confirm(`Удалить учебную группу "${group.name}"?`)) {
-      return;
-    }
-    try {
-      await studyGroupsApi.apiV1StudyGroupsIdDelete({ id: group.id });
-      await fetchPage();
-    } catch (error: any) {
-      alert(error?.message ?? 'Не удалось удалить группу');
-    }
+    setConfirmDelete(group);
   };
 
   const handleSubmit = async (
@@ -171,16 +169,34 @@ const StudyGroupsPage = () => {
     try {
       if ('semesterEnum' in payload) {
         await studyGroupsApi.apiV1StudyGroupsPost({ studyGroupAddRequest: payload });
+        showToast('Учебная группа создана', 'success');
       } else {
         await studyGroupsApi.apiV1StudyGroupsIdPatch({
           id: payload.id,
           studyGroupUpdateRequest: payload.payload,
         });
+        showToast('Учебная группа обновлена', 'success');
       }
       await fetchPage();
     } catch (error: any) {
-      alert(error?.message ?? 'Не удалось сохранить учебную группу');
+      showToast(error?.message ?? 'Не удалось сохранить учебную группу', 'error');
       throw error;
+    }
+  };
+
+  const confirmDeleteGroup = async () => {
+    if (!confirmDelete?.id) {
+      setConfirmDelete(null);
+      return;
+    }
+    try {
+      await studyGroupsApi.apiV1StudyGroupsIdDelete({ id: confirmDelete.id });
+      await fetchPage();
+      showToast(`Группа "${confirmDelete.name}" удалена`, 'success');
+    } catch (error: any) {
+      showToast(error?.message ?? 'Не удалось удалить учебную группу', 'error');
+    } finally {
+      setConfirmDelete(null);
     }
   };
 
@@ -222,7 +238,7 @@ const StudyGroupsPage = () => {
                 Переведено {sortIndicator(paging.sortField, paging.sortOrder, 'transferredStudents')}
               </th>
               <th onClick={() => handleSortToggle('shouldBeExpelled')} style={{ cursor: 'pointer' }}>
-                Должны быть отчислены {sortIndicator(paging.sortField, paging.sortOrder, 'shouldBeExpelled')}
+                Кол-во к отчислению {sortIndicator(paging.sortField, paging.sortOrder, 'shouldBeExpelled')}
               </th>
               <th onClick={() => handleSortToggle('averageMark')} style={{ cursor: 'pointer' }}>
                 Средний балл {sortIndicator(paging.sortField, paging.sortOrder, 'averageMark')}
@@ -319,7 +335,7 @@ const StudyGroupsPage = () => {
           <div className="drawer-field"><strong>Студентов:</strong> {selectedGroup.studentsCount ?? '—'}</div>
           <div className="drawer-field"><strong>Отчислено:</strong> {selectedGroup.expelledStudents}</div>
           <div className="drawer-field"><strong>Переведено:</strong> {selectedGroup.transferredStudents}</div>
-          <div className="drawer-field"><strong>Должны быть отчислены:</strong> {selectedGroup.shouldBeExpelled}</div>
+          <div className="drawer-field"><strong>Кол-во к отчислению:</strong> {selectedGroup.shouldBeExpelled}</div>
           <div className="drawer-field"><strong>Средний балл:</strong> {selectedGroup.averageMark ?? '—'}</div>
           <div className="drawer-field"><strong>Куратор:</strong> {selectedGroup.groupAdmin?.name ?? '—'}</div>
           <div className="drawer-field"><strong>Создано:</strong> {formatDateTime(selectedGroup.creationDate)}</div>
@@ -337,6 +353,23 @@ const StudyGroupsPage = () => {
         onCancel={() => setFormOpen(false)}
         onSubmit={handleSubmit}
       />
+
+      <Modal
+        open={!!confirmDelete}
+        title="Удаление учебной группы"
+        onClose={() => setConfirmDelete(null)}
+        footer={null}
+      >
+        {confirmDelete && (
+          <form className="form-grid" onSubmit={(event) => { event.preventDefault(); confirmDeleteGroup(); }}>
+            <p>Удалить группу <strong>{confirmDelete.name}</strong>? Это действие нельзя отменить.</p>
+            <div className="modal-footer">
+              <button type="button" className="secondary-btn" onClick={() => setConfirmDelete(null)}>Отмена</button>
+              <button type="submit" className="danger-btn">Удалить</button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 };

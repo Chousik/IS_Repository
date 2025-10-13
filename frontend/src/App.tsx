@@ -5,6 +5,7 @@ import PersonsPage from './pages/PersonsPage';
 import StudyGroupsPage from './pages/StudyGroupsPage';
 import SpecialOperationsPage from './pages/SpecialOperationsPage';
 import './App.css';
+import { ToastProvider } from './components/ToastProvider';
 
 type ViewKey = 'study-groups' | 'coordinates' | 'locations' | 'persons' | 'special';
 
@@ -20,32 +21,34 @@ function App() {
   const [activeView, setActiveView] = useState<ViewKey>('study-groups');
 
   return (
-    <div className="app-container">
-      <aside className="app-sidebar">
-        <div className="app-brand">Kuromi IS</div>
-        <nav className="app-menu">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.key}
-              className={item.key === activeView ? 'menu-item active' : 'menu-item'}
-              onClick={() => setActiveView(item.key)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
-      </aside>
-      <main className="app-main">
-        <header className="app-header">Темная академия Kuromi</header>
-        <section className="app-content">
-          {activeView === 'study-groups' && <StudyGroupsPage />}
-          {activeView === 'coordinates' && <CoordinatesPage />}
-          {activeView === 'locations' && <LocationsPage />}
-          {activeView === 'persons' && <PersonsPage />}
-          {activeView === 'special' && <SpecialOperationsPage />}
-        </section>
-      </main>
-    </div>
+    <ToastProvider>
+      <div className="app-container">
+        <aside className="app-sidebar">
+          <div className="app-brand">Kuromi IS</div>
+          <nav className="app-menu">
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.key}
+                className={item.key === activeView ? 'menu-item active' : 'menu-item'}
+                onClick={() => setActiveView(item.key)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+        </aside>
+        <main className="app-main">
+          <header className="app-header">Темная академия Kuromi</header>
+          <section className="app-content">
+            {activeView === 'study-groups' && <StudyGroupsPage />}
+            {activeView === 'coordinates' && <CoordinatesPage />}
+            {activeView === 'locations' && <LocationsPage />}
+            {activeView === 'persons' && <PersonsPage />}
+            {activeView === 'special' && <SpecialOperationsPage />}
+          </section>
+        </main>
+      </div>
+    </ToastProvider>
   );
 }
 
