@@ -82,3 +82,4 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           source: "build/**"
           target: "~/public_html"
+          strip_components: 1
