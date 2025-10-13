@@ -53,6 +53,29 @@ type GroupFormState = {
   clearFormOfEducation?: boolean;
 };
 
+type GroupFormErrors = {
+  name?: string;
+  semesterEnum?: string;
+  studentsCount?: string;
+  expelledStudents?: string;
+  transferredStudents?: string;
+  shouldBeExpelled?: string;
+  averageMark?: string;
+  coordinatesId?: string;
+  coordinatesX?: string;
+  coordinatesY?: string;
+  groupAdminId?: string;
+  adminName?: string;
+  adminHairColor?: string;
+  adminHeight?: string;
+  adminWeight?: string;
+  adminLocationId?: string;
+  adminLocationName?: string;
+  adminLocationX?: string;
+  adminLocationY?: string;
+  adminLocationZ?: string;
+};
+
 interface StudyGroupFormModalProps {
   open: boolean;
   mode: 'create' | 'edit';
@@ -229,11 +252,12 @@ const StudyGroupFormModal = ({
   const { showToast } = useToast();
   const [state, setState] = useState<GroupFormState>(buildInitialState(initialValues));
   const [submitting, setSubmitting] = useState(false);
-  const [semesterError, setSemesterError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<GroupFormErrors>({});
 
   useEffect(() => {
     if (open) {
       setState(buildInitialState(initialValues));
+      setErrors({});
     }
   }, [open, initialValues]);
 
@@ -256,58 +280,130 @@ const StudyGroupFormModal = ({
     setState((prev) => ({ ...prev, [key]: value }));
   };
 
+  const clearError = (key: keyof GroupFormErrors) => {
+    setErrors((prev) => ({ ...prev, [key]: undefined }));
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmedName = state.name.trim();
+    const validationErrors: GroupFormErrors = {};
+
     if (!trimmedName) {
-      showToast('Введите название учебной группы', 'warning');
-      return;
+      validationErrors.name = 'Введите название учебной группы';
     }
     if (!state.semesterEnum) {
-      setSemesterError('Выберите семестр');
-      showToast('Выберите семестр', 'warning');
-      return;
+      validationErrors.semesterEnum = 'Выберите семестр';
     }
-    setSemesterError(null);
-    if (state.coordinatesMode === 'existing' && !state.coordinatesId) {
-      showToast('Выберите координаты', 'warning');
-      return;
-    }
-    if (state.coordinatesMode === 'new') {
-      const coords = state.coordinates;
-      const xValid = coords && !Number.isNaN(coords.x);
-      const yValid = coords && !Number.isNaN(coords.y);
-      if (!xValid || !yValid) {
-        showToast('Заполните координаты X и Y', 'warning');
-        return;
+    if (state.studentsCount != null) {
+      if (Number.isNaN(state.studentsCount)) {
+        validationErrors.studentsCount = 'Укажите количество студентов';
+      } else if (state.studentsCount <= 0) {
+        validationErrors.studentsCount = 'Количество студентов должно быть больше 0';
       }
     }
-    if (state.studentsCount != null && state.studentsCount <= 0) {
-      showToast('Количество студентов должно быть больше 0', 'warning');
+    if (!state.expelledStudents || state.expelledStudents <= 0) {
+      validationErrors.expelledStudents = 'Количество отчисленных студентов должно быть больше 0';
+    }
+    if (!state.transferredStudents || state.transferredStudents <= 0) {
+      validationErrors.transferredStudents = 'Количество переведённых студентов должно быть больше 0';
+    }
+    if (!state.shouldBeExpelled || state.shouldBeExpelled <= 0) {
+      validationErrors.shouldBeExpelled = 'Кол-во к отчислению должно быть больше 0';
+    }
+    if (state.averageMark != null && state.averageMark <= 0) {
+      validationErrors.averageMark = 'Средний балл должен быть больше 0';
+    }
+
+    if (state.coordinatesMode === 'existing') {
+      if (!state.coordinatesId) {
+        validationErrors.coordinatesId = 'Выберите координаты';
+      }
+    } else {
+      const coords = state.coordinates;
+      if (!coords || Number.isNaN(coords.x)) {
+        validationErrors.coordinatesX = 'Укажите значение X';
+      }
+      if (!coords || Number.isNaN(coords.y)) {
+        validationErrors.coordinatesY = 'Укажите значение Y';
+      }
+    }
+
+    if (state.adminMode === 'existing') {
+      if (!state.groupAdminId) {
+        validationErrors.groupAdminId = 'Выберите куратора';
+      }
+    }
+
+    if (state.adminMode === 'new' && state.admin) {
+      const adminName = state.admin.name.trim();
+      if (!adminName) {
+        validationErrors.adminName = 'Введите имя куратора';
+      }
+      if (!state.admin.hairColor) {
+        validationErrors.adminHairColor = 'Выберите цвет волос';
+      }
+      if (!state.admin.height || state.admin.height <= 0) {
+        validationErrors.adminHeight = 'Рост должен быть больше 0';
+      }
+      if (!state.admin.weight || state.admin.weight <= 0) {
+        validationErrors.adminWeight = 'Вес должен быть больше 0';
+      }
+      if (state.admin.locationMode === 'existing' && !state.admin.locationId) {
+        validationErrors.adminLocationId = 'Выберите локацию';
+      }
+      if (state.admin.locationMode === 'new') {
+        const location = state.admin.location;
+        const locationName = location?.name?.trim();
+        if (!locationName) {
+          validationErrors.adminLocationName = 'Введите название локации';
+        }
+        if (!location || Number.isNaN(location.x)) {
+          validationErrors.adminLocationX = 'Укажите координату X';
+        }
+        if (!location || Number.isNaN(location.y)) {
+          validationErrors.adminLocationY = 'Укажите координату Y';
+        }
+        if (!location || Number.isNaN(location.z)) {
+          validationErrors.adminLocationZ = 'Укажите координату Z';
+        }
+      }
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      showToast('Исправьте ошибки в форме', 'warning');
       return;
     }
-    if (state.expelledStudents <= 0) {
-      showToast('Количество отчисленных студентов должно быть больше 0', 'warning');
-      return;
+
+    const preparedState: GroupFormState = {
+      ...state,
+      name: trimmedName,
+    };
+
+    if (state.adminMode === 'new' && state.admin) {
+      preparedState.admin = {
+        ...state.admin,
+        name: state.admin.name.trim(),
+        location:
+          state.admin.locationMode === 'new' && state.admin.location
+            ? {
+                ...state.admin.location,
+                name: state.admin.location.name.trim(),
+              }
+            : state.admin.location,
+      };
     }
-    if (state.transferredStudents <= 0) {
-      showToast('Количество переведённых студентов должно быть больше 0', 'warning');
-      return;
-    }
-    if (state.shouldBeExpelled <= 0) {
-      showToast('Кол-во к отчислению должно быть больше 0', 'warning');
-      return;
-    }
-    const formElement = event.currentTarget;
-    const invalid = Array.from(formElement.querySelectorAll('.invalid-field')) as HTMLElement[];
-    invalid.forEach((field) => field.classList.remove('invalid-field'));
+
+    setState(preparedState);
+    setErrors({});
     setSubmitting(true);
     try {
       if (mode === 'create') {
-        const payload = buildAddPayload(state);
+        const payload = buildAddPayload(preparedState);
         await onSubmit(payload);
       } else if (initialValues?.id != null) {
-        const payload = buildUpdatePayload(state);
+        const payload = buildUpdatePayload(preparedState);
         await onSubmit({ id: initialValues.id, payload });
       }
       onCancel();
@@ -332,8 +428,12 @@ const StudyGroupFormModal = ({
             id="group-name"
             className="input"
             value={state.name}
-            onChange={(event) => onChange('name', event.target.value)}
+            onChange={(event) => {
+              onChange('name', event.target.value);
+              clearError('name');
+            }}
           />
+          {errors.name && <div className="field-error">{errors.name}</div>}
         </div>
 
         <div className="form-field">
@@ -343,16 +443,23 @@ const StudyGroupFormModal = ({
             type="number"
             min={1}
             value={state.studentsCount ?? ''}
-            onChange={(event) =>
-              onChange('studentsCount', event.target.value ? Number(event.target.value) : undefined)
-            }
+            onChange={(event) => {
+              onChange('studentsCount', event.target.value ? Number(event.target.value) : undefined);
+              clearError('studentsCount');
+            }}
           />
+          {errors.studentsCount && <div className="field-error">{errors.studentsCount}</div>}
           {mode === 'edit' && (
             <label className="form-inline">
               <input
                 type="checkbox"
                 checked={state.clearStudentsCount ?? false}
-                onChange={(event) => onChange('clearStudentsCount', event.target.checked)}
+                onChange={(event) => {
+                  onChange('clearStudentsCount', event.target.checked);
+                  if (event.target.checked) {
+                    clearError('studentsCount');
+                  }
+                }}
               />
               очистить значение
             </label>
@@ -366,8 +473,12 @@ const StudyGroupFormModal = ({
             type="number"
             min={1}
             value={state.expelledStudents}
-            onChange={(event) => onChange('expelledStudents', Number(event.target.value))}
+            onChange={(event) => {
+              onChange('expelledStudents', Number(event.target.value));
+              clearError('expelledStudents');
+            }}
           />
+          {errors.expelledStudents && <div className="field-error">{errors.expelledStudents}</div>}
         </div>
 
         <div className="form-field">
@@ -377,8 +488,12 @@ const StudyGroupFormModal = ({
             type="number"
             min={1}
             value={state.transferredStudents}
-            onChange={(event) => onChange('transferredStudents', Number(event.target.value))}
+            onChange={(event) => {
+              onChange('transferredStudents', Number(event.target.value));
+              clearError('transferredStudents');
+            }}
           />
+          {errors.transferredStudents && <div className="field-error">{errors.transferredStudents}</div>}
         </div>
 
         <div className="form-field">
@@ -416,8 +531,12 @@ const StudyGroupFormModal = ({
             type="number"
             min={1}
             value={state.shouldBeExpelled}
-            onChange={(event) => onChange('shouldBeExpelled', Number(event.target.value))}
+            onChange={(event) => {
+              onChange('shouldBeExpelled', Number(event.target.value));
+              clearError('shouldBeExpelled');
+            }}
           />
+          {errors.shouldBeExpelled && <div className="field-error">{errors.shouldBeExpelled}</div>}
         </div>
 
         <div className="form-field">
@@ -427,16 +546,23 @@ const StudyGroupFormModal = ({
             type="number"
             min={1}
             value={state.averageMark ?? ''}
-            onChange={(event) =>
-              onChange('averageMark', event.target.value ? Number(event.target.value) : undefined)
-            }
+            onChange={(event) => {
+              onChange('averageMark', event.target.value ? Number(event.target.value) : undefined);
+              clearError('averageMark');
+            }}
           />
+          {errors.averageMark && <div className="field-error">{errors.averageMark}</div>}
           {mode === 'edit' && (
             <label className="form-inline">
               <input
                 type="checkbox"
                 checked={state.clearAverageMark ?? false}
-                onChange={(event) => onChange('clearAverageMark', event.target.checked)}
+                onChange={(event) => {
+                  onChange('clearAverageMark', event.target.checked);
+                  if (event.target.checked) {
+                    clearError('averageMark');
+                  }
+                }}
               />
               очистить
             </label>
@@ -450,9 +576,7 @@ const StudyGroupFormModal = ({
             value={state.semesterEnum}
             onChange={(event) => {
               onChange('semesterEnum', event.target.value as Semester | '');
-              if (semesterError) {
-                setSemesterError(null);
-              }
+              clearError('semesterEnum');
             }}
           >
             <option value="">—</option>
@@ -462,7 +586,7 @@ const StudyGroupFormModal = ({
               </option>
             ))}
           </select>
-          {semesterError && <div className="field-error">{semesterError}</div>}
+          {errors.semesterEnum && <div className="field-error">{errors.semesterEnum}</div>}
         </div>
 
         <div className="form-field">
@@ -470,59 +594,78 @@ const StudyGroupFormModal = ({
           <select
             className="select"
             value={state.coordinatesMode}
-            onChange={(event) => onChange('coordinatesMode', event.target.value as CoordinatesMode)}
+            onChange={(event) => {
+              const modeValue = event.target.value as CoordinatesMode;
+              onChange('coordinatesMode', modeValue);
+              setErrors((prev) => ({
+                ...prev,
+                coordinatesId: undefined,
+                coordinatesX: undefined,
+                coordinatesY: undefined,
+              }));
+            }}
           >
             <option value="existing">Существующие</option>
             <option value="new">Новые</option>
           </select>
           {state.coordinatesMode === 'existing' ? (
-            <select
-              className="select"
-              value={state.coordinatesId ?? ''}
-              onChange={(event) =>
-                onChange('coordinatesId', event.target.value ? Number(event.target.value) : undefined)
-              }
-            >
-              <option value="">Выберите координаты</option>
-              {coordinatesOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <>
+              <select
+                className="select"
+                value={state.coordinatesId ?? ''}
+                onChange={(event) => {
+                  onChange('coordinatesId', event.target.value ? Number(event.target.value) : undefined);
+                  clearError('coordinatesId');
+                }}
+              >
+                <option value="">Выберите координаты</option>
+                {coordinatesOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {errors.coordinatesId && <div className="field-error">{errors.coordinatesId}</div>}
+            </>
           ) : (
-            <div className="form-inline" style={{ gap: '8px' }}>
-              <input
-                className="number-input"
-                type="number"
-                placeholder="X"
-                value={state.coordinates?.x ?? ''}
-                onChange={(event) =>
-                  setState((prev) => ({
-                    ...prev,
-                    coordinates: {
-                      x: Number(event.target.value),
-                      y: prev.coordinates?.y ?? 0,
-                    },
-                  }))
-                }
-              />
-              <input
-                className="number-input"
-                type="number"
-                placeholder="Y"
-                value={state.coordinates?.y ?? ''}
-                onChange={(event) =>
-                  setState((prev) => ({
-                    ...prev,
-                    coordinates: {
-                      x: prev.coordinates?.x ?? 0,
-                      y: Number(event.target.value),
-                    },
-                  }))
-                }
-              />
-            </div>
+            <>
+              <div className="form-inline" style={{ gap: '8px' }}>
+                <input
+                  className="number-input"
+                  type="number"
+                  placeholder="X"
+                  value={state.coordinates?.x ?? ''}
+                  onChange={(event) => {
+                    setState((prev) => ({
+                      ...prev,
+                      coordinates: {
+                        x: Number(event.target.value),
+                        y: prev.coordinates?.y ?? 0,
+                      },
+                    }));
+                    clearError('coordinatesX');
+                  }}
+                />
+                <input
+                  className="number-input"
+                  type="number"
+                  placeholder="Y"
+                  value={state.coordinates?.y ?? ''}
+                  onChange={(event) => {
+                    setState((prev) => ({
+                      ...prev,
+                      coordinates: {
+                        x: prev.coordinates?.x ?? 0,
+                        y: Number(event.target.value),
+                      },
+                    }));
+                    clearError('coordinatesY');
+                  }}
+                />
+              </div>
+              {errors.coordinatesX && <div className="field-error">{errors.coordinatesX}</div>}
+              {errors.coordinatesY && <div className="field-error">{errors.coordinatesY}</div>}
+            </>
           )}
         </div>
 
@@ -531,27 +674,47 @@ const StudyGroupFormModal = ({
           <select
             className="select"
             value={state.adminMode}
-            onChange={(event) => onChange('adminMode', event.target.value as AdminMode)}
+            onChange={(event) => {
+              const modeValue = event.target.value as AdminMode;
+              onChange('adminMode', modeValue);
+              setErrors((prev) => ({
+                ...prev,
+                groupAdminId: undefined,
+                adminName: undefined,
+                adminHairColor: undefined,
+                adminHeight: undefined,
+                adminWeight: undefined,
+                adminLocationId: undefined,
+                adminLocationName: undefined,
+                adminLocationX: undefined,
+                adminLocationY: undefined,
+                adminLocationZ: undefined,
+              }));
+            }}
           >
             <option value="none">Без куратора</option>
             <option value="existing">Существующий</option>
             <option value="new">Новый</option>
           </select>
           {state.adminMode === 'existing' ? (
-            <select
-              className="select"
-              value={state.groupAdminId ?? ''}
-              onChange={(event) =>
-                onChange('groupAdminId', event.target.value ? Number(event.target.value) : undefined)
-              }
-            >
-              <option value="">Выберите куратора</option>
-              {personsOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <>
+              <select
+                className="select"
+                value={state.groupAdminId ?? ''}
+                onChange={(event) => {
+                  onChange('groupAdminId', event.target.value ? Number(event.target.value) : undefined);
+                  clearError('groupAdminId');
+                }}
+              >
+                <option value="">Выберите куратора</option>
+                {personsOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {errors.groupAdminId && <div className="field-error">{errors.groupAdminId}</div>}
+            </>
           ) : null}
         </div>
 
@@ -564,15 +727,19 @@ const StudyGroupFormModal = ({
                   className="input"
                   value={state.admin.name}
                   onChange={(event) =>
-                    setState((prev) => ({
-                      ...prev,
-                      admin: {
-                        ...prev.admin!,
-                        name: event.target.value,
-                      },
-                    }))
+                    {
+                      setState((prev) => ({
+                        ...prev,
+                        admin: {
+                          ...prev.admin!,
+                          name: event.target.value,
+                        },
+                      }));
+                      clearError('adminName');
+                    }
                   }
                 />
+                {errors.adminName && <div className="field-error">{errors.adminName}</div>}
               </div>
               <div className="form-field">
                 <label>Цвет глаз</label>
@@ -602,15 +769,16 @@ const StudyGroupFormModal = ({
                 <select
                   className="select"
                   value={state.admin.hairColor}
-                  onChange={(event) =>
+                  onChange={(event) => {
                     setState((prev) => ({
                       ...prev,
                       admin: {
                         ...prev.admin!,
                         hairColor: event.target.value as Color,
                       },
-                    }))
-                  }
+                    }));
+                    clearError('adminHairColor');
+                  }}
                 >
                   {colorValues.map((value) => (
                     <option key={value} value={value}>
@@ -618,6 +786,7 @@ const StudyGroupFormModal = ({
                     </option>
                   ))}
                 </select>
+                {errors.adminHairColor && <div className="field-error">{errors.adminHairColor}</div>}
               </div>
               <div className="form-field">
                 <label>Рост</label>
@@ -626,16 +795,18 @@ const StudyGroupFormModal = ({
                   type="number"
                   min={1}
                   value={state.admin.height}
-                  onChange={(event) =>
+                  onChange={(event) => {
                     setState((prev) => ({
                       ...prev,
                       admin: {
                         ...prev.admin!,
                         height: Number(event.target.value),
                       },
-                    }))
-                  }
+                    }));
+                    clearError('adminHeight');
+                  }}
                 />
+                {errors.adminHeight && <div className="field-error">{errors.adminHeight}</div>}
               </div>
               <div className="form-field">
                 <label>Вес</label>
@@ -645,16 +816,18 @@ const StudyGroupFormModal = ({
                   min={1}
                   step={0.1}
                   value={state.admin.weight}
-                  onChange={(event) =>
+                  onChange={(event) => {
                     setState((prev) => ({
                       ...prev,
                       admin: {
                         ...prev.admin!,
                         weight: Number(event.target.value),
                       },
-                    }))
-                  }
+                    }));
+                    clearError('adminWeight');
+                  }}
                 />
+                {errors.adminWeight && <div className="field-error">{errors.adminWeight}</div>}
               </div>
               <div className="form-field">
                 <label>Национальность</label>
@@ -684,124 +857,147 @@ const StudyGroupFormModal = ({
                 <select
                   className="select"
                   value={state.admin.locationMode}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const nextMode = event.target.value as LocationMode;
                     setState((prev) => ({
                       ...prev,
                       admin: {
                         ...prev.admin!,
-                        locationMode: event.target.value as LocationMode,
+                        locationMode: nextMode,
                       },
-                    }))
-                  }
+                    }));
+                    setErrors((prev) => ({
+                      ...prev,
+                      adminLocationId: undefined,
+                      adminLocationName: undefined,
+                      adminLocationX: undefined,
+                      adminLocationY: undefined,
+                      adminLocationZ: undefined,
+                    }));
+                  }}
                 >
                   <option value="none">Без локации</option>
                   <option value="existing">Существующая</option>
                   <option value="new">Новая</option>
                 </select>
                 {state.admin.locationMode === 'existing' ? (
-                  <select
-                    className="select"
-                    value={state.admin.locationId ?? ''}
-                    onChange={(event) =>
-                      setState((prev) => ({
-                        ...prev,
-                        admin: {
-                          ...prev.admin!,
-                          locationId: event.target.value ? Number(event.target.value) : undefined,
-                        },
-                      }))
-                    }
-                  >
-                    <option value="">Выберите локацию</option>
-                    {locationsOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <select
+                      className="select"
+                      value={state.admin.locationId ?? ''}
+                      onChange={(event) => {
+                        setState((prev) => ({
+                          ...prev,
+                          admin: {
+                            ...prev.admin!,
+                            locationId: event.target.value ? Number(event.target.value) : undefined,
+                          },
+                        }));
+                        clearError('adminLocationId');
+                      }}
+                    >
+                      <option value="">Выберите локацию</option>
+                      {locationsOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.adminLocationId && <div className="field-error">{errors.adminLocationId}</div>}
+                  </>
                 ) : null}
                 {state.admin.locationMode === 'new' ? (
-                  <div className="form-inline" style={{ gap: '8px' }}>
-                    <input
-                      className="input"
-                      placeholder="Название"
-                      value={state.admin.location?.name ?? ''}
-                      onChange={(event) =>
-                        setState((prev) => ({
-                          ...prev,
-                          admin: {
-                            ...prev.admin!,
-                            location: {
-                              name: event.target.value,
-                              x: prev.admin?.location?.x ?? 0,
-                              y: prev.admin?.location?.y ?? 0,
-                              z: prev.admin?.location?.z ?? 0,
+                  <>
+                    <div className="form-inline" style={{ gap: '8px' }}>
+                      <input
+                        className="input"
+                        placeholder="Название"
+                        value={state.admin.location?.name ?? ''}
+                        onChange={(event) => {
+                          setState((prev) => ({
+                            ...prev,
+                            admin: {
+                              ...prev.admin!,
+                              location: {
+                                name: event.target.value,
+                                x: prev.admin?.location?.x ?? 0,
+                                y: prev.admin?.location?.y ?? 0,
+                                z: prev.admin?.location?.z ?? 0,
+                              },
                             },
-                          },
-                        }))
-                      }
-                    />
-                    <input
-                      className="number-input"
-                      type="number"
-                      placeholder="X"
-                      value={state.admin.location?.x ?? ''}
-                      onChange={(event) =>
-                        setState((prev) => ({
-                          ...prev,
-                          admin: {
-                            ...prev.admin!,
-                            location: {
-                              name: prev.admin?.location?.name ?? '',
-                              x: Number(event.target.value),
-                              y: prev.admin?.location?.y ?? 0,
-                              z: prev.admin?.location?.z ?? 0,
+                          }));
+                          clearError('adminLocationName');
+                        }}
+                      />
+                      <input
+                        className="number-input"
+                        type="number"
+                        placeholder="X"
+                        value={state.admin.location?.x ?? ''}
+                        onChange={(event) => {
+                          setState((prev) => ({
+                            ...prev,
+                            admin: {
+                              ...prev.admin!,
+                              location: {
+                                name: prev.admin?.location?.name ?? '',
+                                x: Number(event.target.value),
+                                y: prev.admin?.location?.y ?? 0,
+                                z: prev.admin?.location?.z ?? 0,
+                              },
                             },
-                          },
-                        }))
-                      }
-                    />
-                    <input
-                      className="number-input"
-                      type="number"
-                      placeholder="Y"
-                      value={state.admin.location?.y ?? ''}
-                      onChange={(event) =>
-                        setState((prev) => ({
-                          ...prev,
-                          admin: {
-                            ...prev.admin!,
-                            location: {
-                              name: prev.admin?.location?.name ?? '',
-                              x: prev.admin?.location?.x ?? 0,
-                              y: Number(event.target.value),
-                              z: prev.admin?.location?.z ?? 0,
+                          }));
+                          clearError('adminLocationX');
+                        }}
+                      />
+                      <input
+                        className="number-input"
+                        type="number"
+                        placeholder="Y"
+                        value={state.admin.location?.y ?? ''}
+                        onChange={(event) => {
+                          setState((prev) => ({
+                            ...prev,
+                            admin: {
+                              ...prev.admin!,
+                              location: {
+                                name: prev.admin?.location?.name ?? '',
+                                x: prev.admin?.location?.x ?? 0,
+                                y: Number(event.target.value),
+                                z: prev.admin?.location?.z ?? 0,
+                              },
                             },
-                          },
-                        }))
-                      }
-                    />
-                    <input
-                      className="number-input"
-                      type="number"
-                      placeholder="Z"
-                      value={state.admin.location?.z ?? ''}
-                      onChange={(event) =>
-                        setState((prev) => ({
-                          ...prev,
-                          admin: {
-                            ...prev.admin!,
-                            location: {
-                              name: prev.admin?.location?.name ?? '',
-                              x: prev.admin?.location?.x ?? 0,
-                              y: prev.admin?.location?.y ?? 0,
-                              z: Number(event.target.value),
+                          }));
+                          clearError('adminLocationY');
+                        }}
+                      />
+                      <input
+                        className="number-input"
+                        type="number"
+                        placeholder="Z"
+                        value={state.admin.location?.z ?? ''}
+                        onChange={(event) => {
+                          setState((prev) => ({
+                            ...prev,
+                            admin: {
+                              ...prev.admin!,
+                              location: {
+                                name: prev.admin?.location?.name ?? '',
+                                x: prev.admin?.location?.x ?? 0,
+                                y: prev.admin?.location?.y ?? 0,
+                                z: Number(event.target.value),
+                              },
                             },
-                          },
-                        }))
-                      }
-                    />
-                  </div>
+                          }));
+                          clearError('adminLocationZ');
+                        }}
+                      />
+                    </div>
+                    {errors.adminLocationName && <div className="field-error">{errors.adminLocationName}</div>}
+                    {errors.adminLocationX && <div className="field-error">{errors.adminLocationX}</div>}
+                    {errors.adminLocationY && <div className="field-error">{errors.adminLocationY}</div>}
+                    {errors.adminLocationZ && <div className="field-error">{errors.adminLocationZ}</div>}
+                  </>
                 ) : null}
               </div>
             </div>
