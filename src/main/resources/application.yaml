@@ -4,7 +4,7 @@ spring:
   datasource:
     driver-class-name: org.postgresql.Driver
     username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    password: ${DB_PASS}
     url: jdbc:postgresql://pg:5432/studs
   jpa:
     open-in-view: false
