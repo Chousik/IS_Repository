@@ -13,6 +13,14 @@ import { useToast } from '../components/ToastProvider';
 
 const PAGE_SIZE = 10;
 
+type LocationFormErrors = {
+  name?: string;
+  x?: string;
+  y?: string;
+  z?: string;
+  replacement?: string;
+};
+
 const LocationsPage = () => {
   const [locations, setLocations] = useState<LocationResponse[]>([]);
   const [persons, setPersons] = useState<PersonResponse[]>([]);
@@ -24,6 +32,9 @@ const LocationsPage = () => {
   const [deleteContext, setDeleteContext] = useState<{ location: LocationResponse; personIds: number[] } | null>(null);
   const [replacementId, setReplacementId] = useState<number | ''>('');
   const [confirmDelete, setConfirmDelete] = useState<LocationResponse | null>(null);
+  const [createErrors, setCreateErrors] = useState<LocationFormErrors>({});
+  const [editErrors, setEditErrors] = useState<LocationFormErrors>({});
+  const [replacementError, setReplacementError] = useState<string | null>(null);
   const { showToast } = useToast();
 
   const refreshData = useCallback(async () => {
@@ -59,18 +70,63 @@ const LocationsPage = () => {
   const currentPage = Math.min(page, maxPage);
   const paginated = locations.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
+  const validateLocationForm = (
+    formData: FormData,
+    setErrors: React.Dispatch<React.SetStateAction<LocationFormErrors>>
+  ): { name: string; x: number; y: number; z: number } | null => {
+    const errors: LocationFormErrors = {};
+    const name = String(formData.get('name') ?? '').trim();
+    const rawX = formData.get('x');
+    const rawY = formData.get('y');
+    const rawZ = formData.get('z');
+    const parsedX = rawX !== null && String(rawX).trim() !== '' ? Number(rawX) : NaN;
+    const parsedY = rawY !== null && String(rawY).trim() !== '' ? Number(rawY) : NaN;
+    const parsedZ = rawZ !== null && String(rawZ).trim() !== '' ? Number(rawZ) : NaN;
+
+    if (!name) {
+      errors.name = 'Введите название локации';
+    }
+    if (rawX === null || String(rawX).trim() === '') {
+      errors.x = 'Введите значение X';
+    } else if (Number.isNaN(parsedX)) {
+      errors.x = 'Значение X должно быть числом';
+    }
+    if (rawY === null || String(rawY).trim() === '') {
+      errors.y = 'Введите значение Y';
+    } else if (Number.isNaN(parsedY)) {
+      errors.y = 'Значение Y должно быть числом';
+    }
+    if (rawZ === null || String(rawZ).trim() === '') {
+      errors.z = 'Введите значение Z';
+    } else if (Number.isNaN(parsedZ)) {
+      errors.z = 'Значение Z должно быть числом';
+    }
+
+    setErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      showToast('Исправьте ошибки в форме', 'warning');
+      return null;
+    }
+    return { name, x: parsedX, y: parsedY, z: parsedZ };
+  };
+
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    const valid = validateLocationForm(formData, setCreateErrors);
+    if (!valid) {
+      return;
+    }
     const payload: LocationAddRequest = {
-      name: String(formData.get('name')),
-      x: Number(formData.get('x')),
-      y: Number(formData.get('y')),
-      z: Number(formData.get('z')),
+      name: valid.name,
+      x: valid.x,
+      y: valid.y,
+      z: valid.z,
     };
     try {
       await locationsApi.apiV1LocationsPost({ locationAddRequest: payload });
       setCreateOpen(false);
+      setCreateErrors({});
       await refreshData();
       showToast('Локация создана', 'success');
     } catch (err: any) {
@@ -82,15 +138,20 @@ const LocationsPage = () => {
     event.preventDefault();
     if (!editLocation?.id) return;
     const formData = new FormData(event.currentTarget);
+    const valid = validateLocationForm(formData, setEditErrors);
+    if (!valid) {
+      return;
+    }
     const payload: LocationUpdateRequest = {
-      name: String(formData.get('name')),
-      x: Number(formData.get('x')),
-      y: Number(formData.get('y')),
-      z: Number(formData.get('z')),
+      name: valid.name,
+      x: valid.x,
+      y: valid.y,
+      z: valid.z,
     };
     try {
       await locationsApi.apiV1LocationsIdPatch({ id: editLocation.id, locationUpdateRequest: payload });
       setEditLocation(null);
+      setEditErrors({});
       await refreshData();
       showToast('Локация обновлена', 'success');
     } catch (err: any) {
@@ -106,13 +167,17 @@ const LocationsPage = () => {
     }
     setDeleteContext({ location, personIds: affected });
     setReplacementId('');
+    setReplacementError(null);
   };
 
   const confirmDeleteWithReplacement = async () => {
     if (!deleteContext?.location.id || replacementId === '') {
-      showToast('Выберите новую локацию для переназначения', 'warning');
+      const message = 'Выберите новую локацию для переназначения';
+      setReplacementError(message);
+      showToast(message, 'warning');
       return;
     }
+    setReplacementError(null);
     try {
       await Promise.all(
         deleteContext.personIds.map((id) =>
@@ -125,6 +190,7 @@ const LocationsPage = () => {
       await locationsApi.apiV1LocationsIdDelete({ id: deleteContext.location.id });
       setDeleteContext(null);
       setReplacementId('');
+      setReplacementError(null);
       await refreshData();
       showToast('Локация удалена и назначена замена', 'success');
     } catch (err: any) {
@@ -161,7 +227,15 @@ const LocationsPage = () => {
     <div>
       <div className="section-heading">
         <h2>Локации</h2>
-        <button className="primary-btn" onClick={() => setCreateOpen(true)}>Добавить</button>
+        <button
+          className="primary-btn"
+          onClick={() => {
+            setCreateErrors({});
+            setCreateOpen(true);
+          }}
+        >
+          Добавить
+        </button>
       </div>
 
       {error && <div className="error-banner">{error}</div>}
@@ -218,51 +292,135 @@ const LocationsPage = () => {
         </button>
       </div>
 
-      <Modal open={createOpen} title="Создание локации" onClose={() => setCreateOpen(false)} footer={null}>
-        <form className="form-grid" onSubmit={handleCreate}>
+      <Modal
+        open={createOpen}
+        title="Создание локации"
+        onClose={() => {
+          setCreateOpen(false);
+          setCreateErrors({});
+        }}
+        footer={null}
+      >
+        <form className="form-grid" onSubmit={handleCreate} noValidate>
           <div className="form-field">
             <label>Название</label>
-            <input className="input" name="name" required />
+            <input
+              className="input"
+              name="name"
+              onChange={() => setCreateErrors((prev) => ({ ...prev, name: undefined }))}
+            />
+            {createErrors.name && <div className="field-error">{createErrors.name}</div>}
           </div>
           <div className="form-field">
             <label>X</label>
-            <input className="number-input" name="x" type="number" required />
+            <input
+              className="number-input"
+              name="x"
+              type="number"
+              onChange={() => setCreateErrors((prev) => ({ ...prev, x: undefined }))}
+            />
+            {createErrors.x && <div className="field-error">{createErrors.x}</div>}
           </div>
           <div className="form-field">
             <label>Y</label>
-            <input className="number-input" name="y" type="number" required />
+            <input
+              className="number-input"
+              name="y"
+              type="number"
+              onChange={() => setCreateErrors((prev) => ({ ...prev, y: undefined }))}
+            />
+            {createErrors.y && <div className="field-error">{createErrors.y}</div>}
           </div>
           <div className="form-field">
             <label>Z</label>
-            <input className="number-input" name="z" type="number" required />
+            <input
+              className="number-input"
+              name="z"
+              type="number"
+              onChange={() => setCreateErrors((prev) => ({ ...prev, z: undefined }))}
+            />
+            {createErrors.z && <div className="field-error">{createErrors.z}</div>}
           </div>
           <div className="modal-footer">
-            <button type="button" className="secondary-btn" onClick={() => setCreateOpen(false)}>Отмена</button>
+            <button
+              type="button"
+              className="secondary-btn"
+              onClick={() => {
+                setCreateOpen(false);
+                setCreateErrors({});
+              }}
+            >
+              Отмена
+            </button>
             <button type="submit" className="primary-btn">Сохранить</button>
           </div>
         </form>
       </Modal>
 
-      <Modal open={!!editLocation} title="Редактирование локации" onClose={() => setEditLocation(null)} footer={null}>
-        <form className="form-grid" onSubmit={handleUpdate}>
+      <Modal
+        open={!!editLocation}
+        title="Редактирование локации"
+        onClose={() => {
+          setEditLocation(null);
+          setEditErrors({});
+        }}
+        footer={null}
+      >
+        <form className="form-grid" onSubmit={handleUpdate} noValidate>
           <div className="form-field">
             <label>Название</label>
-            <input className="input" name="name" defaultValue={editLocation?.name} required />
+            <input
+              className="input"
+              name="name"
+              defaultValue={editLocation?.name}
+              onChange={() => setEditErrors((prev) => ({ ...prev, name: undefined }))}
+            />
+            {editErrors.name && <div className="field-error">{editErrors.name}</div>}
           </div>
           <div className="form-field">
             <label>X</label>
-            <input className="number-input" name="x" type="number" defaultValue={editLocation?.x} required />
+            <input
+              className="number-input"
+              name="x"
+              type="number"
+              defaultValue={editLocation?.x}
+              onChange={() => setEditErrors((prev) => ({ ...prev, x: undefined }))}
+            />
+            {editErrors.x && <div className="field-error">{editErrors.x}</div>}
           </div>
           <div className="form-field">
             <label>Y</label>
-            <input className="number-input" name="y" type="number" defaultValue={editLocation?.y} required />
+            <input
+              className="number-input"
+              name="y"
+              type="number"
+              defaultValue={editLocation?.y}
+              onChange={() => setEditErrors((prev) => ({ ...prev, y: undefined }))}
+            />
+            {editErrors.y && <div className="field-error">{editErrors.y}</div>}
           </div>
           <div className="form-field">
             <label>Z</label>
-            <input className="number-input" name="z" type="number" defaultValue={editLocation?.z} required />
+            <input
+              className="number-input"
+              name="z"
+              type="number"
+              defaultValue={editLocation?.z}
+              onChange={() => setEditErrors((prev) => ({ ...prev, z: undefined }))}
+            />
+            {editErrors.z && <div className="field-error">{editErrors.z}</div>}
           </div>
           <div className="modal-footer">
-            <button type="button" className="secondary-btn" onClick={() => setEditLocation(null)}>Отмена</button>
+            <button
+              type="button"
+              className="secondary-btn"
+              onClick={() => {
+                setEditLocation(null);
+                setEditErrors({});
+              }}
+            >
+              Отмена
+            </button>
             <button type="submit" className="primary-btn">Сохранить</button>
           </div>
         </form>
@@ -274,6 +432,7 @@ const LocationsPage = () => {
         onClose={() => {
           setDeleteContext(null);
           setReplacementId('');
+          setReplacementError(null);
         }}
         footer={null}
       >
@@ -283,10 +442,12 @@ const LocationsPage = () => {
             <div className="form-field">
               <label>Новая локация</label>
               <select
-                className="select"
+                className={`select${replacementError ? ' invalid-field' : ''}`}
                 value={replacementId}
-                onChange={(event) => setReplacementId(event.target.value ? Number(event.target.value) : '')}
-                required
+                onChange={(event) => {
+                  setReplacementId(event.target.value ? Number(event.target.value) : '');
+                  setReplacementError(null);
+                }}
               >
                 <option value="">Выберите локацию</option>
                 {replacementOptions.map((option) => (
@@ -295,9 +456,20 @@ const LocationsPage = () => {
                   </option>
                 ))}
               </select>
+              {replacementError && <div className="field-error">{replacementError}</div>}
             </div>
             <div className="modal-footer">
-              <button type="button" className="secondary-btn" onClick={() => setDeleteContext(null)}>Отмена</button>
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => {
+                  setDeleteContext(null);
+                  setReplacementId('');
+                  setReplacementError(null);
+                }}
+              >
+                Отмена
+              </button>
               <button type="submit" className="danger-btn">Переназначить и удалить</button>
             </div>
           </form>

@@ -51,6 +51,7 @@ const PersonsPage = () => {
   const [editLocationMode, setEditLocationMode] = useState<LocationMode>('none');
   const [createErrors, setCreateErrors] = useState<PersonFormErrors>({});
   const [editErrors, setEditErrors] = useState<PersonFormErrors>({});
+  const [replacementError, setReplacementError] = useState<string | null>(null);
 
   const refreshData = useCallback(async () => {
     try {
@@ -212,13 +213,17 @@ const PersonsPage = () => {
     }
     setDeleteContext({ person, groupIds: affected });
     setReplacementId('');
+    setReplacementError(null);
   };
 
   const confirmDeleteWithReplacement = async () => {
     if (!deleteContext?.person.id || replacementId === '') {
-      showToast('Выберите куратора для переназначения', 'warning');
+      const message = 'Выберите куратора для переназначения';
+      setReplacementError(message);
+      showToast(message, 'warning');
       return;
     }
+    setReplacementError(null);
     try {
       await Promise.all(
         deleteContext.groupIds.map((id) =>
@@ -231,6 +236,7 @@ const PersonsPage = () => {
       await personsApi.apiV1PersonsIdDelete({ id: deleteContext.person.id });
       setDeleteContext(null);
       setReplacementId('');
+      setReplacementError(null);
       await refreshData();
       showToast('Куратор удалён и замена назначена', 'success');
     } catch (err: any) {
@@ -560,6 +566,7 @@ const PersonsPage = () => {
         onClose={() => {
           setDeleteContext(null);
           setReplacementId('');
+          setReplacementError(null);
         }}
         footer={null}
       >
@@ -569,19 +576,32 @@ const PersonsPage = () => {
             <div className="form-field">
               <label>Новый куратор</label>
               <select
-                className="select"
+                className={`select${replacementError ? ' invalid-field' : ''}`}
                 value={replacementId}
-                onChange={(event) => setReplacementId(event.target.value ? Number(event.target.value) : '')}
-                required
+                onChange={(event) => {
+                  setReplacementId(event.target.value ? Number(event.target.value) : '');
+                  setReplacementError(null);
+                }}
               >
                 <option value="">Выберите куратора</option>
                 {replacementOptions.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
+              {replacementError && <div className="field-error">{replacementError}</div>}
             </div>
             <div className="modal-footer">
-              <button type="button" className="secondary-btn" onClick={() => setDeleteContext(null)}>Отмена</button>
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => {
+                  setDeleteContext(null);
+                  setReplacementId('');
+                  setReplacementError(null);
+                }}
+              >
+                Отмена
+              </button>
               <button type="submit" className="danger-btn">Переназначить и удалить</button>
             </div>
           </form>
