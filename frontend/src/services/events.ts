@@ -16,12 +16,12 @@ export function subscribeToEntityChanges(callback: (change: EntityChange) => voi
     }
     if (typeof window !== 'undefined') {
       if (process.env.NODE_ENV === 'development') {
-        return 'ws://localhost:8080';
+        return 'ws://localhost:8041';
       }
       const origin = window.location.origin;
       return origin.replace(/^http/, 'ws');
     }
-    return 'ws://localhost:8080';
+    return 'ws://localhost:8041';
   };
 
   const connect = () => {

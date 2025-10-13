@@ -4,9 +4,9 @@ spring:
     name: IS-project
   datasource:
     driver-class-name: org.postgresql.Driver
-    username: postgres
-    password: postgres
-    url: jdbc:postgresql://localhost:5432/is_app
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://pg:5432/studs
   jpa:
     open-in-view: false
     properties:

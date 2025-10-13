@@ -26,7 +26,7 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa"){
-        exclude(group = "org.hibernate.orm", module = "hibernate-core")
+        exclude(group = "org.hibernate", module = "hibernate-core")
     }
     // https://mvnrepository.com/artifact/org.eclipse.persistence/eclipselink
     implementation("org.eclipse.persistence:eclipselink:4.0.6")

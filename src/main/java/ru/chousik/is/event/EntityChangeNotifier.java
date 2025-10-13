@@ -49,7 +49,7 @@ public class EntityChangeNotifier {
             session.sendMessage(new TextMessage(payload));
             return true;
         } catch (JsonProcessingException e) {
-            return true; // JSON error shouldn't detach session
+            return true;
         } catch (IOException e) {
             try {
                 session.close();
