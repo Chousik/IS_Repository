@@ -26,7 +26,7 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa"){
-        exclude(group = "org.hibernate", module = "hibernate-core")
+        exclude(group = "org.hibernate.orm", module = "hibernate-core")
     }
     // https://mvnrepository.com/artifact/org.eclipse.persistence/eclipselink
     implementation("org.eclipse.persistence:eclipselink:4.0.6")
@@ -50,8 +50,6 @@ dependencies {
     annotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
     // https://mvnrepository.com/artifact/com.nimbusds/nimbus-jose-jwt
     implementation("com.nimbusds:nimbus-jose-jwt:10.3.1")
-    // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-devtools
-    implementation("org.springframework.boot:spring-boot-devtools:3.5.0")
     implementation("io.swagger.core.v3:swagger-annotations:2.2.22")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
 }
