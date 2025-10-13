@@ -88,4 +88,3 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           source: "dist/*.jar"
           target: "~/is"
-          overwrite: true
