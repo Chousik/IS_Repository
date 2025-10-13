@@ -24,7 +24,7 @@ public class StudyGroup {
     private String name; // не null, не пустая строка
 
     @NotNull
-    @OneToOne(cascade = CascadeType.ALL, optional = false)
+    @OneToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, optional = false)
     @JoinColumn(name = "coordinates_id", nullable = false)
     private Coordinates coordinates; // отдельная сущность
 

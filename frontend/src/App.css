@@ -1,17 +1,18 @@
 :root {
-  --hk-background: #181320;
-  --hk-panel: #231b2f;
-  --hk-sidebar-gradient: linear-gradient(180deg, #2d2337 0%, #1d1627 60%, #120d19 100%);
-  --hk-primary: #ff7acb;
-  --hk-primary-dark: #f25ab4;
-  --hk-secondary: #3a2b4a;
-  --hk-secondary-dark: #2f233d;
+  --hk-background: #120c18;
+  --hk-panel: #1e1426;
+  --hk-sidebar-gradient: linear-gradient(180deg, #2b1f35 0%, #1a1324 60%, #100a18 100%);
+  --hk-primary: #ff6fcf;
+  --hk-primary-dark: #e05fb8;
+  --hk-secondary: #2b2238;
+  --hk-secondary-dark: #21192d;
   --hk-danger: #ff6888;
   --hk-danger-dark: #e74f73;
-  --hk-text: #f3e9ff;
-  --hk-muted: #c5afd9;
-  --hk-border: #443453;
-  --hk-shadow: 0 14px 32px rgba(0, 0, 0, 0.55);
+  --hk-text: #f7eaff;
+  --hk-muted: #beb0d3;
+  --hk-border: #3d3050;
+  --hk-shadow: 0 18px 38px rgba(0, 0, 0, 0.6);
+  --hk-accent: #8f9bff;
   --hk-radius: 18px;
 }
 
@@ -206,8 +207,8 @@ table {
 }
 
 table thead {
-  background: linear-gradient(180deg, #362745 0%, #2b1f3a 100%);
-  color: #ffb7e7;
+  background: linear-gradient(180deg, #2f2440 0%, #20152b 100%);
+  color: var(--hk-text);
 }
 
 table th,
@@ -240,8 +241,8 @@ table tbody tr:hover {
   justify-content: center;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(255, 122, 203, 0.2);
-  color: var(--hk-primary);
+  background: rgba(143, 155, 255, 0.18);
+  color: var(--hk-accent);
   font-weight: 600;
 }
 
@@ -329,6 +330,11 @@ table tbody tr:hover {
   gap: 8px;
 }
 
+.field-error {
+  color: rgba(255, 104, 136, 0.9);
+  font-size: 13px;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -378,6 +384,7 @@ table tbody tr:hover {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  color: var(--hk-text);
 }
 
 .special-card h3 {
@@ -416,6 +423,7 @@ table tbody tr:hover {
 .error-banner {
   background: rgba(51, 39, 68, 0.85);
   border: 1px solid rgba(255, 104, 136, 0.55);
+  border-left: 4px solid rgba(255, 104, 136, 0.85);
   color: var(--hk-text);
   padding: 12px 16px;
   border-radius: 14px;
@@ -456,6 +464,10 @@ table tbody tr:hover {
   border: 1px solid rgba(91, 72, 116, 0.6);
   font-weight: 600;
   letter-spacing: 0.01em;
+}
+
+.toast-info {
+  border-color: rgba(143, 155, 255, 0.4);
 }
 
 .toast-success {

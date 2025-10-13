@@ -8,10 +8,12 @@ import {
 import { studyGroupsApi } from '../apiClient';
 import { loadAllStudyGroups } from '../services/entityLoaders';
 import { subscribeToEntityChanges } from '../services/events';
+import { useToast } from '../components/ToastProvider';
 
 const semesterOptions: Semester[] = ['FIRST', 'SECOND', 'FOURTH', 'SIXTH', 'SEVENTH'];
 
 const SpecialOperationsPage = () => {
+  const { showToast } = useToast();
   const [studyGroups, setStudyGroups] = useState<StudyGroupResponse[]>([]);
   const [deleteAllSemester, setDeleteAllSemester] = useState<Semester>('FIRST');
   const [deleteOneSemester, setDeleteOneSemester] = useState<Semester>('FIRST');
@@ -20,6 +22,7 @@ const SpecialOperationsPage = () => {
   const [selectedGroupId, setSelectedGroupId] = useState<number | ''>('');
   const [studentCount, setStudentCount] = useState(1);
   const [loadingState, setLoadingState] = useState<{ [key: string]: boolean }>({});
+  const [addStudentError, setAddStudentError] = useState<string | null>(null);
 
   const setLoading = (key: string, value: boolean) =>
     setLoadingState((prev) => ({ ...prev, [key]: value }));
@@ -30,8 +33,9 @@ const SpecialOperationsPage = () => {
       setStudyGroups(groups);
     } catch (err: any) {
       console.error(err);
+      showToast(err?.message ?? 'Не удалось обновить список групп', 'error');
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     refreshGroups();
@@ -51,9 +55,9 @@ const SpecialOperationsPage = () => {
     try {
       await studyGroupsApi.apiV1StudyGroupsBySemesterDelete({ semesterEnum: deleteAllSemester });
       await refreshGroups();
-      alert('Удаление выполнено');
+      showToast('Группы удалены', 'success');
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось удалить группы');
+      showToast(err?.message ?? 'Не удалось удалить группы', 'error');
     } finally {
       setLoading('deleteAll', false);
     }
@@ -64,9 +68,9 @@ const SpecialOperationsPage = () => {
     try {
       await studyGroupsApi.apiV1StudyGroupsBySemesterOneDelete({ semesterEnum: deleteOneSemester });
       await refreshGroups();
-      alert('Группа удалена');
+      showToast('Группа удалена', 'success');
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось удалить группу');
+      showToast(err?.message ?? 'Не удалось удалить группу', 'error');
     } finally {
       setLoading('deleteOne', false);
     }
@@ -77,8 +81,9 @@ const SpecialOperationsPage = () => {
     try {
       const stats = await studyGroupsApi.apiV1StudyGroupsStatsShouldBeExpelledGet();
       setGroupedData(stats);
+      showToast('Данные обновлены', 'success');
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось получить статистику');
+      showToast(err?.message ?? 'Не удалось получить статистику', 'error');
     } finally {
       setLoading('groupStats', false);
     }
@@ -89,8 +94,9 @@ const SpecialOperationsPage = () => {
     try {
       const result = await studyGroupsApi.apiV1StudyGroupsStatsExpelledTotalGet();
       setTotalExpelled(result);
+      showToast('Данные обновлены', 'success');
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось получить сумму');
+      showToast(err?.message ?? 'Не удалось получить сумму', 'error');
     } finally {
       setLoading('totalExpelled', false);
     }
@@ -98,9 +104,14 @@ const SpecialOperationsPage = () => {
 
   const handleAddStudent = async () => {
     if (!selectedGroupId) {
-      alert('Выберите группу');
+      setAddStudentError('Выберите группу');
       return;
     }
+    if (studentCount <= 0) {
+      setAddStudentError('Количество должно быть больше 0');
+      return;
+    }
+    setAddStudentError(null);
     setLoading('addStudent', true);
     try {
       const group = studyGroups.find((g) => g.id === Number(selectedGroupId));
@@ -110,9 +121,10 @@ const SpecialOperationsPage = () => {
         studyGroupUpdateRequest: { studentsCount: current + studentCount },
       });
       await refreshGroups();
-      alert('Студенты добавлены');
+      setAddStudentError(null);
+      showToast('Студенты добавлены', 'success');
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось обновить группу');
+      showToast(err?.message ?? 'Не удалось обновить группу', 'error');
     } finally {
       setLoading('addStudent', false);
     }
@@ -155,7 +167,7 @@ const SpecialOperationsPage = () => {
         </div>
 
         <div className="special-card">
-          <h3>Группировка по shouldBeExpelled</h3>
+          <h3>Группировка по количеству к отчислению</h3>
           <button className="secondary-btn" onClick={handleGroupStats} disabled={loadingState['groupStats']}>
             {loadingState['groupStats'] ? 'Загрузка...' : 'Получить данные'}
           </button>
@@ -165,7 +177,7 @@ const SpecialOperationsPage = () => {
             ) : (
               groupedData.map((item) => (
                 <li key={item.shouldBeExpelled}>
-                  shouldBeExpelled = {item.shouldBeExpelled}: {item.count}
+                  Кол-во к отчислению {item.shouldBeExpelled}: {item.count}
                 </li>
               ))
             )}
@@ -187,7 +199,12 @@ const SpecialOperationsPage = () => {
           <select
             className="select"
             value={selectedGroupId}
-            onChange={(event) => setSelectedGroupId(event.target.value ? Number(event.target.value) : '')}
+            onChange={(event) => {
+              setSelectedGroupId(event.target.value ? Number(event.target.value) : '');
+              if (addStudentError) {
+                setAddStudentError(null);
+              }
+            }}
           >
             <option value="">Выберите группу</option>
             {studyGroups.map((group) => (
@@ -196,12 +213,18 @@ const SpecialOperationsPage = () => {
               </option>
             ))}
           </select>
+          {addStudentError && <div className="field-error">{addStudentError}</div>}
           <input
             className="number-input"
             type="number"
             min={1}
             value={studentCount}
-            onChange={(event) => setStudentCount(Number(event.target.value))}
+            onChange={(event) => {
+              setStudentCount(Number(event.target.value));
+              if (addStudentError) {
+                setAddStudentError(null);
+              }
+            }}
           />
           <button className="primary-btn" onClick={handleAddStudent} disabled={loadingState['addStudent']}>
             {loadingState['addStudent'] ? 'Добавление...' : 'Добавить'}

@@ -145,7 +145,7 @@ public class StudyGroupService {
             applyUpdates(studyGroup, request, resolvedCoordinates, resolvedAdmin);
         }
 
-        List<StudyGroup> saved = studyGroupRepository.saveAll(studyGroups);
+        List<StudyGroup> saved = studyGroupRepository.saveAllAndFlush(studyGroups);
         List<StudyGroupResponse> responses = saved.stream().map(studyGroupMapper::toStudyGroupResponse).toList();
         responses.forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "UPDATED", response));
         return responses;
@@ -158,7 +158,12 @@ public class StudyGroupService {
             entityChangeNotifier.publish("STUDY_GROUP", "DELETED", new DeletedPayload(id));
             return null;
         }
+        Long coordinateId = studyGroup.getCoordinates() != null ? studyGroup.getCoordinates().getId() : null;
         studyGroupRepository.delete(studyGroup);
+        studyGroupRepository.flush();
+        if (coordinateId != null && !studyGroupRepository.existsByCoordinatesId(coordinateId)) {
+            coordinatesRepository.deleteById(coordinateId);
+        }
         StudyGroupResponse response = studyGroupMapper.toStudyGroupResponse(studyGroup);
         entityChangeNotifier.publish("STUDY_GROUP", "DELETED", response);
         return response;
@@ -171,10 +176,24 @@ public class StudyGroupService {
         }
         Collection<StudyGroup> studyGroups = studyGroupRepository.findAllById(ids);
         validateAllIdsPresent(ids, studyGroups);
+        Set<Long> coordinateIds = studyGroups.stream()
+                .map(StudyGroup::getCoordinates)
+                .filter(Objects::nonNull)
+                .map(Coordinates::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
         List<StudyGroupResponse> responses = studyGroups.stream()
                 .map(studyGroupMapper::toStudyGroupResponse)
                 .toList();
-        studyGroupRepository.deleteAll(studyGroups);
+        studyGroupRepository.deleteAllInBatch(studyGroups);
+        if (!coordinateIds.isEmpty()) {
+            List<Long> removableIds = coordinateIds.stream()
+                    .filter(id -> !studyGroupRepository.existsByCoordinatesId(id))
+                    .toList();
+            if (!removableIds.isEmpty()) {
+                coordinatesRepository.deleteAllByIdInBatch(removableIds);
+            }
+        }
         responses.forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "DELETED", response));
     }
 
@@ -187,10 +206,24 @@ public class StudyGroupService {
         if (studyGroups.isEmpty()) {
             throw new NotFoundException("Учебные группы с семестром %s не найдены".formatted(semesterEnum));
         }
+        Set<Long> coordinateIds = studyGroups.stream()
+                .map(StudyGroup::getCoordinates)
+                .filter(Objects::nonNull)
+                .map(Coordinates::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
         List<StudyGroupResponse> responses = studyGroups.stream()
                 .map(studyGroupMapper::toStudyGroupResponse)
                 .toList();
-        studyGroupRepository.deleteAll(studyGroups);
+        studyGroupRepository.deleteAllInBatch(studyGroups);
+        if (!coordinateIds.isEmpty()) {
+            List<Long> removableIds = coordinateIds.stream()
+                    .filter(id -> !studyGroupRepository.existsByCoordinatesId(id))
+                    .toList();
+            if (!removableIds.isEmpty()) {
+                coordinatesRepository.deleteAllByIdInBatch(removableIds);
+            }
+        }
         responses.forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "DELETED", response));
         return responses.size();
     }
@@ -202,7 +235,12 @@ public class StudyGroupService {
         }
         StudyGroup studyGroup = studyGroupRepository.findFirstBySemesterEnum(semesterEnum)
                 .orElseThrow(() -> new NotFoundException("Учебные группы с семестром %s не найдены".formatted(semesterEnum)));
+        Long coordinateId = studyGroup.getCoordinates() != null ? studyGroup.getCoordinates().getId() : null;
         studyGroupRepository.delete(studyGroup);
+        studyGroupRepository.flush();
+        if (coordinateId != null && !studyGroupRepository.existsByCoordinatesId(coordinateId)) {
+            coordinatesRepository.deleteById(coordinateId);
+        }
         StudyGroupResponse response = studyGroupMapper.toStudyGroupResponse(studyGroup);
         entityChangeNotifier.publish("STUDY_GROUP", "DELETED", response);
         return response;

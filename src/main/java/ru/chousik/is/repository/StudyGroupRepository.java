@@ -22,6 +22,8 @@ public interface StudyGroupRepository extends JpaRepository<StudyGroup, Long> {
     @Query("select coalesce(sum(sg.expelledStudents), 0) from StudyGroup sg")
     Long sumExpelledStudents();
 
+    boolean existsByCoordinatesId(Long coordinatesId);
+
     interface ShouldBeExpelledGroupProjection {
         long getShouldBeExpelled();
 

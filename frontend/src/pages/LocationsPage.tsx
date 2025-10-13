@@ -9,6 +9,7 @@ import type {
 import { loadAllLocations, loadAllPersons } from '../services/entityLoaders';
 import { subscribeToEntityChanges } from '../services/events';
 import Modal from '../components/Modal';
+import { useToast } from '../components/ToastProvider';
 
 const PAGE_SIZE = 10;
 
@@ -22,6 +23,8 @@ const LocationsPage = () => {
   const [editLocation, setEditLocation] = useState<LocationResponse | null>(null);
   const [deleteContext, setDeleteContext] = useState<{ location: LocationResponse; personIds: number[] } | null>(null);
   const [replacementId, setReplacementId] = useState<number | ''>('');
+  const [confirmDelete, setConfirmDelete] = useState<LocationResponse | null>(null);
+  const { showToast } = useToast();
 
   const refreshData = useCallback(async () => {
     try {
@@ -31,11 +34,13 @@ const LocationsPage = () => {
       setPersons(people);
       setError(null);
     } catch (err: any) {
-      setError(err?.message ?? 'Не удалось загрузить локации');
+      const message = err?.message ?? 'Не удалось загрузить локации';
+      setError(message);
+      showToast(message, 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     refreshData();
@@ -67,8 +72,9 @@ const LocationsPage = () => {
       await locationsApi.apiV1LocationsPost({ locationAddRequest: payload });
       setCreateOpen(false);
       await refreshData();
+      showToast('Локация создана', 'success');
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось создать локацию');
+      showToast(err?.message ?? 'Не удалось создать локацию', 'error');
     }
   };
 
@@ -86,20 +92,16 @@ const LocationsPage = () => {
       await locationsApi.apiV1LocationsIdPatch({ id: editLocation.id, locationUpdateRequest: payload });
       setEditLocation(null);
       await refreshData();
+      showToast('Локация обновлена', 'success');
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось обновить локацию');
+      showToast(err?.message ?? 'Не удалось обновить локацию', 'error');
     }
   };
 
   const handleDelete = (location: LocationResponse) => {
     const affected = persons.filter((person) => person.location?.id === location.id).map((p) => p.id!).filter(Boolean);
     if (affected.length === 0) {
-      if (window.confirm('Удалить локацию?')) {
-        locationsApi
-          .apiV1LocationsIdDelete({ id: location.id! })
-          .then(refreshData)
-          .catch((err) => alert(err?.message ?? 'Не удалось удалить локацию'));
-      }
+      setConfirmDelete(location);
       return;
     }
     setDeleteContext({ location, personIds: affected });
@@ -108,7 +110,7 @@ const LocationsPage = () => {
 
   const confirmDeleteWithReplacement = async () => {
     if (!deleteContext?.location.id || replacementId === '') {
-      alert('Выберите локацию для переназначения');
+      showToast('Выберите новую локацию для переназначения', 'warning');
       return;
     }
     try {
@@ -124,8 +126,25 @@ const LocationsPage = () => {
       setDeleteContext(null);
       setReplacementId('');
       await refreshData();
+      showToast('Локация удалена и назначена замена', 'success');
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось переназначить локации');
+      showToast(err?.message ?? 'Не удалось переназначить локации', 'error');
+    }
+  };
+
+  const confirmDeleteLocation = async () => {
+    if (!confirmDelete?.id) {
+      setConfirmDelete(null);
+      return;
+    }
+    try {
+      await locationsApi.apiV1LocationsIdDelete({ id: confirmDelete.id });
+      await refreshData();
+      showToast('Локация удалена', 'success');
+    } catch (err: any) {
+      showToast(err?.message ?? 'Не удалось удалить локацию', 'error');
+    } finally {
+      setConfirmDelete(null);
     }
   };
 
@@ -145,7 +164,7 @@ const LocationsPage = () => {
         <button className="primary-btn" onClick={() => setCreateOpen(true)}>Добавить</button>
       </div>
 
-      {error && <div style={{ color: '#dc2626', marginBottom: 12 }}>{error}</div>}
+      {error && <div className="error-banner">{error}</div>}
 
       <div className="table-wrapper">
         <table>
@@ -280,6 +299,23 @@ const LocationsPage = () => {
             <div className="modal-footer">
               <button type="button" className="secondary-btn" onClick={() => setDeleteContext(null)}>Отмена</button>
               <button type="submit" className="danger-btn">Переназначить и удалить</button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!confirmDelete}
+        title="Удаление локации"
+        onClose={() => setConfirmDelete(null)}
+        footer={null}
+      >
+        {confirmDelete && (
+          <form className="form-grid" onSubmit={(event) => { event.preventDefault(); confirmDeleteLocation(); }}>
+            <p>Удалить локацию <strong>#{confirmDelete.id}</strong> {confirmDelete.name}?</p>
+            <div className="modal-footer">
+              <button type="button" className="secondary-btn" onClick={() => setConfirmDelete(null)}>Отмена</button>
+              <button type="submit" className="danger-btn">Удалить</button>
             </div>
           </form>
         )}

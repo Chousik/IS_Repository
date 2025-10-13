@@ -168,7 +168,7 @@ const CoordinatesPage = () => {
 
   const confirmDeleteWithReplacement = async () => {
     if (!deleteContext?.coordinate.id || replacementId === '') {
-      alert('Выберите координаты для переназначения');
+      showToast('Выберите координаты для переназначения', 'warning');
       return;
     }
     try {
@@ -181,8 +181,9 @@ const CoordinatesPage = () => {
       setDeleteContext(null);
       setReplacementId('');
       await fetchPage();
+      showToast('Координаты переназначены и удалены', 'success');
     } catch (err: any) {
-      alert(err?.message ?? 'Не удалось переназначить координаты');
+      showToast(err?.message ?? 'Не удалось переназначить координаты', 'error');
     }
   };
 
@@ -262,8 +263,8 @@ const CoordinatesPage = () => {
         <button className="secondary-btn" onClick={() => setPaging((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))} disabled={paging.page === 1}>
           Назад
         </button>
-        <span>Страница {paging.page} из {pagedData.totalPages > 0 ? pagedData.totalPages : 1}</span>
-        <button className="secondary-btn" onClick={() => setPaging((prev) => ({ ...prev, page: Math.min(prev.page + 1, pagedData.totalPages || 1) }))} disabled={paging.page >= (pagedData.totalPages || 1)}>
+        <span>Страница {paging.page} из {maxPage}</span>
+        <button className="secondary-btn" onClick={() => setPaging((prev) => ({ ...prev, page: Math.min(prev.page + 1, maxPage) }))} disabled={paging.page >= maxPage}>
           Вперёд
         </button>
       </div>

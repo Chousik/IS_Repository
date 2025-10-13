@@ -227,7 +227,7 @@ const StudyGroupFormModal = ({
 }: StudyGroupFormModalProps) => {
   const [state, setState] = useState<GroupFormState>(buildInitialState(initialValues));
   const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [semesterError, setSemesterError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -257,10 +257,10 @@ const StudyGroupFormModal = ({
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!state.semesterEnum) {
-      setFormError('Пожалуйста, выберите семестр');
+      setSemesterError('Выберите семестр');
       return;
     }
-    setFormError(null);
+    setSemesterError(null);
     setSubmitting(true);
     try {
       if (mode === 'create') {
@@ -286,9 +286,6 @@ const StudyGroupFormModal = ({
       footer={null}
     >
       <form onSubmit={handleSubmit} className="form-grid">
-        {formError && (
-          <div className="error-banner full-width">{formError}</div>
-        )}
         <div className="form-field full-width">
           <label htmlFor="group-name">Название</label>
           <input
@@ -376,7 +373,7 @@ const StudyGroupFormModal = ({
         </div>
 
         <div className="form-field">
-          <label>Должны быть отчислены</label>
+          <label>Кол-во к отчислению</label>
           <input
             className="number-input"
             type="number"
@@ -415,7 +412,12 @@ const StudyGroupFormModal = ({
           <select
             className="select"
             value={state.semesterEnum}
-            onChange={(event) => onChange('semesterEnum', event.target.value as Semester | '')}
+            onChange={(event) => {
+              onChange('semesterEnum', event.target.value as Semester | '');
+              if (semesterError) {
+                setSemesterError(null);
+              }
+            }}
           >
             <option value="">—</option>
             {semesterValues.map((value) => (
@@ -424,6 +426,7 @@ const StudyGroupFormModal = ({
               </option>
             ))}
           </select>
+          {semesterError && <div className="field-error">{semesterError}</div>}
         </div>
 
         <div className="form-field">

@@ -3,7 +3,6 @@ import {
   CoordinatesResponse,
   LocationResponse,
   PersonResponse,
-  Semester,
   StudyGroupAddRequest,
   StudyGroupResponse,
   StudyGroupUpdateRequest,
@@ -209,7 +208,7 @@ const StudyGroupsPage = () => {
         <button className="primary-btn" onClick={openCreateModal}>Создать группу</button>
       </div>
 
-      {tableError && <div style={{ color: '#dc2626', marginBottom: 12 }}>{tableError}</div>}
+      {tableError && <div className="error-banner">{tableError}</div>}
 
       <div className="table-wrapper">
         <table>
