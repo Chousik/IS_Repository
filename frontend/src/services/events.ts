@@ -10,17 +10,6 @@ export function subscribeToEntityChanges(callback: (change: EntityChange) => voi
   let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
   const resolveBase = () => {
-    const envBase = process.env.REACT_APP_WS_BASE;
-    if (envBase && envBase.length > 0) {
-      return envBase.replace(/\/$/, '');
-    }
-    if (typeof window !== 'undefined') {
-      if (process.env.NODE_ENV === 'development') {
-        return 'ws://localhost:8041';
-      }
-      const origin = window.location.origin;
-      return origin.replace(/^http/, 'ws');
-    }
     return 'ws://localhost:8041';
   };
 

@@ -1,139 +1,200 @@
 <mxfile host="Electron" agent="Mozilla/5.0" version="26.0.9">
-  <diagram id="is-architecture" name="Layers">
+  <diagram id="domain-class-diagram" name="Domain">
     <mxGraphModel dx="1280" dy="720" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
 
-        <!-- Controllers column -->
-        <mxCell id="controllers" value="Controllers" style="swimlane;fontStyle=2;align=center;verticalAlign=top;horizontal=0;startSize=28;rounded=0;shadow=0;html=1;" parent="1" vertex="1">
-          <mxGeometry x="40" y="80" width="180" height="520" as="geometry" />
+        <!-- StudyGroup class -->
+        <mxCell id="StudyGroup" value="StudyGroup" style="swimlane;fontStyle=2;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeLast=0;collapsible=0;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;html=1;" parent="1" vertex="1">
+          <mxGeometry x="200" y="120" width="220" height="420" as="geometry">
+            <mxRectangle x="0" y="0" width="220" height="28" as="alternateBounds" />
+          </mxGeometry>
         </mxCell>
-        <mxCell id="CoordinatesController" value="CoordinatesController&lt;div&gt;/api/v1/coordinates&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="controllers" vertex="1">
-          <mxGeometry y="28" width="180" height="70" as="geometry" />
+        <mxCell id="sg-id" value="id: Long" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;spacingLeft=8;" vertex="1" parent="StudyGroup">
+          <mxGeometry y="28" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="LocationController" value="LocationController&lt;div&gt;/api/v1/locations&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="controllers" vertex="1">
-          <mxGeometry y="98" width="180" height="70" as="geometry" />
+        <mxCell id="sg-name" value="name: String" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="StudyGroup">
+          <mxGeometry y="54" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="PersonController" value="PersonController&lt;div&gt;/api/v1/persons&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="controllers" vertex="1">
-          <mxGeometry y="168" width="180" height="70" as="geometry" />
+        <mxCell id="sg-coordinates" value="coordinates: Coordinates" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="StudyGroup">
+          <mxGeometry y="80" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="StudyGroupController" value="StudyGroupController&lt;div&gt;/api/v1/study-groups&lt;/div&gt;&lt;div&gt;спецоперации&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="controllers" vertex="1">
-          <mxGeometry y="238" width="180" height="110" as="geometry" />
+        <mxCell id="sg-creationDate" value="creationDate: LocalDateTime" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="StudyGroup">
+          <mxGeometry y="106" width="220" height="26" as="geometry" />
         </mxCell>
-
-        <!-- Services column -->
-        <mxCell id="services" value="Services" style="swimlane;fontStyle=2;align=center;verticalAlign=top;horizontal=0;startSize=28;rounded=0;shadow=0;html=1;" parent="1" vertex="1">
-          <mxGeometry x="260" y="80" width="200" height="520" as="geometry" />
+        <mxCell id="sg-studentsCount" value="studentsCount: Long?" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="StudyGroup">
+          <mxGeometry y="132" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="CoordinatesService" value="CoordinatesService&lt;div&gt;CRUD + связи со студ. группами&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="services" vertex="1">
-          <mxGeometry y="28" width="200" height="90" as="geometry" />
+        <mxCell id="sg-expelled" value="expelledStudents: long" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="StudyGroup">
+          <mxGeometry y="158" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="LocationService" value="LocationService&lt;div&gt;CRUD + переназначение в Person&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="services" vertex="1">
-          <mxGeometry y="118" width="200" height="90" as="geometry" />
+        <mxCell id="sg-transferred" value="transferredStudents: long" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="StudyGroup">
+          <mxGeometry y="184" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="PersonService" value="PersonService&lt;div&gt;CRUD + привязка Location&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="services" vertex="1">
-          <mxGeometry y="208" width="200" height="90" as="geometry" />
+        <mxCell id="sg-form" value="formOfEducation: FormOfEducation?" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="StudyGroup">
+          <mxGeometry y="210" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="StudyGroupService" value="StudyGroupService&lt;div&gt;CRUD&lt;/div&gt;&lt;div&gt;спецоперации (семестры, статистика)&lt;/div&gt;&lt;div&gt;уведомления WebSocket&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="services" vertex="1">
-          <mxGeometry y="298" width="200" height="140" as="geometry" />
+        <mxCell id="sg-should" value="shouldBeExpelled: long" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="StudyGroup">
+          <mxGeometry y="236" width="220" height="26" as="geometry" />
         </mxCell>
-
-        <!-- Mappers column -->
-        <mxCell id="mappers" value="MapStruct mappers" style="swimlane;fontStyle=2;align=center;verticalAlign=top;horizontal=0;startSize=28;rounded=0;shadow=0;html=1;" parent="1" vertex="1">
-          <mxGeometry x="500" y="80" width="200" height="320" as="geometry" />
+        <mxCell id="sg-average" value="averageMark: Integer?" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="StudyGroup">
+          <mxGeometry y="262" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="CoordinatesMapper" value="CoordinatesMapper" style="rounded=0;whiteSpace=wrap;html=1;" parent="mappers" vertex="1">
-          <mxGeometry y="28" width="200" height="60" as="geometry" />
+        <mxCell id="sg-semester" value="semesterEnum: Semester" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="StudyGroup">
+          <mxGeometry y="288" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="LocationMapper" value="LocationMapper" style="rounded=0;whiteSpace=wrap;html=1;" parent="mappers" vertex="1">
-          <mxGeometry y="88" width="200" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="PersonMapper" value="PersonMapper" style="rounded=0;whiteSpace=wrap;html=1;" parent="mappers" vertex="1">
-          <mxGeometry y="148" width="200" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="StudyGroupMapper" value="StudyGroupMapper" style="rounded=0;whiteSpace=wrap;html=1;" parent="mappers" vertex="1">
-          <mxGeometry y="208" width="200" height="60" as="geometry" />
+        <mxCell id="sg-admin" value="groupAdmin: Person?" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="StudyGroup">
+          <mxGeometry y="314" width="220" height="26" as="geometry" />
         </mxCell>
 
-        <!-- Repositories column -->
-        <mxCell id="repositories" value="Repositories" style="swimlane;fontStyle=2;align=center;verticalAlign=top;horizontal=0;startSize=28;rounded=0;shadow=0;html=1;" parent="1" vertex="1">
-          <mxGeometry x="720" y="80" width="210" height="520" as="geometry" />
+        <!-- Coordinates class -->
+        <mxCell id="Coordinates" value="Coordinates" style="swimlane;fontStyle=2;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;collapsible=0;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;html=1;" parent="1" vertex="1">
+          <mxGeometry x="540" y="120" width="200" height="200" as="geometry" />
         </mxCell>
-        <mxCell id="CoordinatesRepository" value="CoordinatesRepository&lt;div&gt;JpaRepository&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="repositories" vertex="1">
-          <mxGeometry y="28" width="210" height="60" as="geometry" />
+        <mxCell id="c-id" value="id: Long" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Coordinates">
+          <mxGeometry y="28" width="200" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="LocationRepository" value="LocationRepository&lt;div&gt;JpaRepository&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="repositories" vertex="1">
-          <mxGeometry y="88" width="210" height="60" as="geometry" />
+        <mxCell id="c-x" value="x: long" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Coordinates">
+          <mxGeometry y="54" width="200" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="PersonRepository" value="PersonRepository&lt;div&gt;JpaRepository&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="repositories" vertex="1">
-          <mxGeometry y="148" width="210" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="StudyGroupRepository" value="StudyGroupRepository&lt;div&gt;sumExpelledStudents()&lt;/div&gt;&lt;div&gt;countGroupedByShouldBeExpelled()&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="repositories" vertex="1">
-          <mxGeometry y="208" width="210" height="120" as="geometry" />
+        <mxCell id="c-y" value="y: float" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Coordinates">
+          <mxGeometry y="80" width="200" height="26" as="geometry" />
         </mxCell>
 
-        <!-- DTO column -->
-        <mxCell id="dtos" value="DTOs" style="swimlane;fontStyle=2;align=center;verticalAlign=top;horizontal=0;startSize=28;rounded=0;shadow=0;html=1;" parent="1" vertex="1">
-          <mxGeometry x="960" y="80" width="230" height="520" as="geometry" />
+        <!-- Person class -->
+        <mxCell id="Person" value="Person" style="swimlane;fontStyle=2;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;collapsible=0;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;html=1;" parent="1" vertex="1">
+          <mxGeometry x="200" y="460" width="220" height="360" as="geometry" />
         </mxCell>
-        <mxCell id="RequestDTOs" value="requests&lt;div&gt;StudyGroupAddRequest&lt;/div&gt;&lt;div&gt;StudyGroupUpdateRequest&lt;/div&gt;&lt;div&gt;PersonAdd/Update&lt;/div&gt;&lt;div&gt;LocationAdd/Update&lt;/div&gt;&lt;div&gt;CoordinatesAdd/Update&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="dtos" vertex="1">
-          <mxGeometry y="28" width="230" height="180" as="geometry" />
+        <mxCell id="p-id" value="id: Long" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Person">
+          <mxGeometry y="28" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="ResponseDTOs" value="responses&lt;div&gt;StudyGroupResponse&lt;/div&gt;&lt;div&gt;PagedResponses&lt;/div&gt;&lt;div&gt;PersonResponse&lt;/div&gt;&lt;div&gt;LocationResponse&lt;/div&gt;&lt;div&gt;CoordinatesResponse&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="dtos" vertex="1">
-          <mxGeometry y="208" width="230" height="180" as="geometry" />
+        <mxCell id="p-name" value="name: String" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Person">
+          <mxGeometry y="54" width="220" height="26" as="geometry" />
         </mxCell>
-
-        <!-- Entities column -->
-        <mxCell id="entities" value="Entities / Enums" style="swimlane;fontStyle=2;align=center;verticalAlign=top;horizontal=0;startSize=28;rounded=0;shadow=0;html=1;" parent="1" vertex="1">
-          <mxGeometry x="1220" y="80" width="260" height="520" as="geometry" />
+        <mxCell id="p-eye" value="eyeColor: Color?" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Person">
+          <mxGeometry y="80" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="EntityStudyGroup" value="StudyGroup&lt;div&gt;see fields&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" parent="entities" vertex="1">
-          <mxGeometry y="28" width="260" height="60" as="geometry" />
+        <mxCell id="p-hair" value="hairColor: Color" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Person">
+          <mxGeometry y="106" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="EntityPerson" value="Person" style="rounded=0;whiteSpace=wrap;html=1;" parent="entities" vertex="1">
-          <mxGeometry y="88" width="260" height="60" as="geometry" />
+        <mxCell id="p-location" value="location: Location?" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Person">
+          <mxGeometry y="132" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="EntityLocation" value="Location" style="rounded=0;whiteSpace=wrap;html=1;" parent="entities" vertex="1">
-          <mxGeometry y="148" width="260" height="60" as="geometry" />
+        <mxCell id="p-height" value="height: Long" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Person">
+          <mxGeometry y="158" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="EntityCoordinates" value="Coordinates" style="rounded=0;whiteSpace=wrap;html=1;" parent="entities" vertex="1">
-          <mxGeometry y="208" width="260" height="60" as="geometry" />
+        <mxCell id="p-weight" value="weight: float" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Person">
+          <mxGeometry y="184" width="220" height="26" as="geometry" />
         </mxCell>
-        <mxCell id="EnumFormOfEducation" value="FormOfEducation" style="rounded=0;whiteSpace=wrap;html=1;" parent="entities" vertex="1">
-          <mxGeometry y="268" width="260" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="EnumSemester" value="Semester" style="rounded=0;whiteSpace=wrap;html=1;" parent="entities" vertex="1">
-          <mxGeometry y="328" width="260" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="EnumColor" value="Color" style="rounded=0;whiteSpace=wrap;html=1;" parent="entities" vertex="1">
-          <mxGeometry y="388" width="260" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="EnumCountry" value="Country" style="rounded=0;whiteSpace=wrap;html=1;" parent="entities" vertex="1">
-          <mxGeometry y="448" width="260" height="60" as="geometry" />
+        <mxCell id="p-nation" value="nationality: Country?" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Person">
+          <mxGeometry y="210" width="220" height="26" as="geometry" />
         </mxCell>
 
-        <!-- Edges between layers -->
-        <mxCell id="edge-ctrl-coords" style="endArrow=block;endFill=1;" parent="1" source="CoordinatesController" target="CoordinatesService" edge="1" />
-        <mxCell id="edge-ctrl-location" style="endArrow=block;endFill=1;" parent="1" source="LocationController" target="LocationService" edge="1" />
-        <mxCell id="edge-ctrl-person" style="endArrow=block;endFill=1;" parent="1" source="PersonController" target="PersonService" edge="1" />
-        <mxCell id="edge-ctrl-study" style="endArrow=block;endFill=1;" parent="1" source="StudyGroupController" target="StudyGroupService" edge="1" />
+        <!-- Location class -->
+        <mxCell id="Location" value="Location" style="swimlane;fontStyle=2;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;collapsible=0;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;html=1;" parent="1" vertex="1">
+          <mxGeometry x="540" y="460" width="220" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="l-id" value="id: Long" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Location">
+          <mxGeometry y="28" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="l-x" value="x: int" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Location">
+          <mxGeometry y="54" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="l-y" value="y: Double" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Location">
+          <mxGeometry y="80" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="l-z" value="z: double" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Location">
+          <mxGeometry y="106" width="220" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="l-name" value="name: String" style="text;html=1;align=left;verticalAlign=middle;resizable=0;autosize=1;spacingLeft=8;" vertex="1" parent="Location">
+          <mxGeometry y="132" width="220" height="26" as="geometry" />
+        </mxCell>
 
-        <mxCell id="edge-svc-coords-mapper" style="endArrow=open;dashed=1;" parent="1" source="CoordinatesService" target="CoordinatesMapper" edge="1" />
-        <mxCell id="edge-svc-location-mapper" style="endArrow=open;dashed=1;" parent="1" source="LocationService" target="LocationMapper" edge="1" />
-        <mxCell id="edge-svc-person-mapper" style="endArrow=open;dashed=1;" parent="1" source="PersonService" target="PersonMapper" edge="1" />
-        <mxCell id="edge-svc-study-mapper" style="endArrow=open;dashed=1;" parent="1" source="StudyGroupService" target="StudyGroupMapper" edge="1" />
+        <!-- Enumerations -->
+        <mxCell id="FormOfEducation" value="FormOfEducation" style="swimlane;fontStyle=2;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;collapsible=0;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;html=1;" parent="1" vertex="1">
+          <mxGeometry x="860" y="120" width="200" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="foe1" value="DISTANCE_EDUCATION" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="FormOfEducation">
+          <mxGeometry y="28" width="200" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="foe2" value="FULL_TIME_EDUCATION" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="FormOfEducation">
+          <mxGeometry y="54" width="200" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="foe3" value="EVENING_CLASSES" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="FormOfEducation">
+          <mxGeometry y="80" width="200" height="26" as="geometry" />
+        </mxCell>
 
-        <mxCell id="edge-svc-coords-repo" style="endArrow=block;endFill=1;" parent="1" source="CoordinatesService" target="CoordinatesRepository" edge="1" />
-        <mxCell id="edge-svc-location-repo" style="endArrow=block;endFill=1;" parent="1" source="LocationService" target="LocationRepository" edge="1" />
-        <mxCell id="edge-svc-person-repo" style="endArrow=block;endFill=1;" parent="1" source="PersonService" target="PersonRepository" edge="1" />
-        <mxCell id="edge-svc-study-repo" style="endArrow=block;endFill=1;" parent="1" source="StudyGroupService" target="StudyGroupRepository" edge="1" />
+        <mxCell id="Semester" value="Semester" style="swimlane;fontStyle=2;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;collapsible=0;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;html=1;" parent="1" vertex="1">
+          <mxGeometry x="1080" y="120" width="200" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="sem1" value="FIRST" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="Semester">
+          <mxGeometry y="28" width="200" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="sem2" value="SECOND" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="Semester">
+          <mxGeometry y="54" width="200" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="sem3" value="FOURTH" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="Semester">
+          <mxGeometry y="80" width="200" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="sem4" value="SIXTH" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="Semester">
+          <mxGeometry y="106" width="200" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="sem5" value="SEVENTH" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="Semester">
+          <mxGeometry y="132" width="200" height="26" as="geometry" />
+        </mxCell>
 
-        <mxCell id="edge-mapper-dto" style="endArrow=open;dashed=1;" parent="1" source="StudyGroupMapper" target="ResponseDTOs" edge="1" />
-        <mxCell id="edge-dto-entity" style="endArrow=open;dashed=1;" parent="1" source="ResponseDTOs" target="EntityStudyGroup" edge="1" />
-        <mxCell id="edge-req-entity" style="endArrow=open;dashed=1;" parent="1" source="RequestDTOs" target="EntityStudyGroup" edge="1" />
-        <mxCell id="edge-study-entities" style="endArrow=open;dashed=1;" parent="1" source="EntityStudyGroup" target="EntityCoordinates" edge="1" />
-        <mxCell id="edge-person-location" style="endArrow=open;dashed=1;" parent="1" source="EntityPerson" target="EntityLocation" edge="1" />
+        <mxCell id="Color" value="Color" style="swimlane;fontStyle=2;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;collapsible=0;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;html=1;" parent="1" vertex="1">
+          <mxGeometry x="860" y="360" width="200" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="color1" value="BLACK" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="Color">
+          <mxGeometry y="28" width="200" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="color2" value="YELLOW" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="Color">
+          <mxGeometry y="54" width="200" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="color3" value="ORANGE" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="Color">
+          <mxGeometry y="80" width="200" height="26" as="geometry" />
+        </mxCell>
+
+        <mxCell id="Country" value="Country" style="swimlane;fontStyle=2;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;collapsible=0;marginBottom=0;rounded=0;shadow=0;strokeWidth=1;html=1;" parent="1" vertex="1">
+          <mxGeometry x="1080" y="360" width="200" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="country1" value="UNITED_KINGDOM" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="Country">
+          <mxGeometry y="28" width="200" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="country2" value="FRANCE" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="Country">
+          <mxGeometry y="54" width="200" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="country3" value="INDIA" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="Country">
+          <mxGeometry y="80" width="200" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="country4" value="VATICAN" style="text;html=1;align=left;spacingLeft=8;" vertex="1" parent="Country">
+          <mxGeometry y="106" width="200" height="26" as="geometry" />
+        </mxCell>
+
+        <!-- Relationships -->
+        <mxCell id="edge-sg-coordinates" style="endArrow=block;endFill=1;strokeWidth=1;" parent="1" source="StudyGroup" target="Coordinates" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-sg-person" style="endArrow=block;endFill=1;strokeWidth=1;" parent="1" source="StudyGroup" target="Person" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-person-location" style="endArrow=block;endFill=1;strokeWidth=1;" parent="1" source="Person" target="Location" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-person-color" style="endArrow=open;dashed=1;strokeWidth=1;" parent="1" source="Person" target="Color" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-person-country" style="endArrow=open;dashed=1;strokeWidth=1;" parent="1" source="Person" target="Country" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-sg-form" style="endArrow=open;dashed=1;strokeWidth=1;" parent="1" source="StudyGroup" target="FormOfEducation" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-sg-semester" style="endArrow=open;dashed=1;strokeWidth=1;" parent="1" source="StudyGroup" target="Semester" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
