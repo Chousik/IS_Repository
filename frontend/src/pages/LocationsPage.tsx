@@ -21,6 +21,8 @@ type LocationFormErrors = {
   replacement?: string;
 };
 
+type LocationSortField = 'id' | 'name' | 'x' | 'y' | 'z';
+
 const LocationsPage = () => {
   const [locations, setLocations] = useState<LocationResponse[]>([]);
   const [persons, setPersons] = useState<PersonResponse[]>([]);
@@ -35,6 +37,8 @@ const LocationsPage = () => {
   const [createErrors, setCreateErrors] = useState<LocationFormErrors>({});
   const [editErrors, setEditErrors] = useState<LocationFormErrors>({});
   const [replacementError, setReplacementError] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<LocationSortField | undefined>(undefined);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const { showToast } = useToast();
 
   const refreshData = useCallback(async () => {
@@ -66,9 +70,73 @@ const LocationsPage = () => {
     return unsubscribe;
   }, [refreshData]);
 
-  const maxPage = Math.max(1, Math.ceil(locations.length / PAGE_SIZE));
+  const getSortValue = (location: LocationResponse, field: LocationSortField): number | string | null => {
+    switch (field) {
+      case 'id':
+        return location.id ?? null;
+      case 'name':
+        return location.name ?? '';
+      case 'x':
+        return location.x ?? null;
+      case 'y':
+        return location.y ?? null;
+      case 'z':
+        return location.z ?? null;
+      default:
+        return null;
+    }
+  };
+
+  const sortedLocations = useMemo(() => {
+    if (!sortField) {
+      return locations;
+    }
+    const copy = [...locations];
+    copy.sort((a, b) => {
+      const aValue = getSortValue(a, sortField);
+      const bValue = getSortValue(b, sortField);
+      let result = 0;
+      if (aValue == null && bValue == null) {
+        result = 0;
+      } else if (aValue == null) {
+        result = 1;
+      } else if (bValue == null) {
+        result = -1;
+      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+        result = aValue - bValue;
+      } else {
+        result = String(aValue).localeCompare(String(bValue), 'ru', { sensitivity: 'accent', numeric: true });
+      }
+      return sortOrder === 'asc' ? result : -result;
+    });
+    return copy;
+  }, [locations, sortField, sortOrder]);
+
+  const maxPage = Math.max(1, Math.ceil(sortedLocations.length / PAGE_SIZE));
   const currentPage = Math.min(page, maxPage);
-  const paginated = locations.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginated = sortedLocations.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const toggleSort = (field: LocationSortField) => {
+    if (sortField !== field) {
+      setSortField(field);
+      setSortOrder('asc');
+      setPage(1);
+      return;
+    }
+    if (sortOrder === 'asc') {
+      setSortOrder('desc');
+      setPage(1);
+      return;
+    }
+    setSortField(undefined);
+    setSortOrder('asc');
+    setPage(1);
+  };
+
+  const sortIndicator = (field: LocationSortField) => {
+    if (sortField !== field) return '';
+    return sortOrder === 'asc' ? '▲' : '▼';
+  };
 
   const validateLocationForm = (
     formData: FormData,
@@ -244,11 +312,11 @@ const LocationsPage = () => {
         <table>
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Название</th>
-              <th>X</th>
-              <th>Y</th>
-              <th>Z</th>
+              <th onClick={() => toggleSort('id')} style={{ cursor: 'pointer' }}>ID {sortIndicator('id')}</th>
+              <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer' }}>Название {sortIndicator('name')}</th>
+              <th onClick={() => toggleSort('x')} style={{ cursor: 'pointer' }}>X {sortIndicator('x')}</th>
+              <th onClick={() => toggleSort('y')} style={{ cursor: 'pointer' }}>Y {sortIndicator('y')}</th>
+              <th onClick={() => toggleSort('z')} style={{ cursor: 'pointer' }}>Z {sortIndicator('z')}</th>
               <th></th>
             </tr>
           </thead>

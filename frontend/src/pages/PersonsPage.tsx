@@ -27,6 +27,16 @@ type PersonFormErrors = {
   location?: string;
 };
 
+type PersonSortField =
+  | 'id'
+  | 'name'
+  | 'eyeColor'
+  | 'hairColor'
+  | 'height'
+  | 'weight'
+  | 'nationality'
+  | 'locationName';
+
 const resolveLocationMode = (person?: PersonResponse | null): LocationMode => {
   if (!person?.location) {
     return 'none';
@@ -52,6 +62,8 @@ const PersonsPage = () => {
   const [createErrors, setCreateErrors] = useState<PersonFormErrors>({});
   const [editErrors, setEditErrors] = useState<PersonFormErrors>({});
   const [replacementError, setReplacementError] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<PersonSortField | undefined>(undefined);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const refreshData = useCallback(async () => {
     try {
@@ -87,9 +99,79 @@ const PersonsPage = () => {
     return unsubscribe;
   }, [refreshData]);
 
-  const maxPage = Math.max(1, Math.ceil(persons.length / PAGE_SIZE));
+  const getSortValue = (person: PersonResponse, field: PersonSortField): number | string | null => {
+    switch (field) {
+      case 'id':
+        return person.id ?? null;
+      case 'name':
+        return person.name ?? '';
+      case 'eyeColor':
+        return person.eyeColor ?? '';
+      case 'hairColor':
+        return person.hairColor ?? '';
+      case 'height':
+        return person.height ?? null;
+      case 'weight':
+        return person.weight ?? null;
+      case 'nationality':
+        return person.nationality ?? '';
+      case 'locationName':
+        return person.location?.name ?? '';
+      default:
+        return null;
+    }
+  };
+
+  const sortedPersons = useMemo(() => {
+    if (!sortField) {
+      return persons;
+    }
+    const copy = [...persons];
+    copy.sort((a, b) => {
+      const aValue = getSortValue(a, sortField);
+      const bValue = getSortValue(b, sortField);
+      let result = 0;
+      if (aValue == null && bValue == null) {
+        result = 0;
+      } else if (aValue == null) {
+        result = 1;
+      } else if (bValue == null) {
+        result = -1;
+      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+        result = aValue - bValue;
+      } else {
+        result = String(aValue).localeCompare(String(bValue), 'ru', { sensitivity: 'accent', numeric: true });
+      }
+      return sortOrder === 'asc' ? result : -result;
+    });
+    return copy;
+  }, [persons, sortField, sortOrder]);
+
+  const maxPage = Math.max(1, Math.ceil(sortedPersons.length / PAGE_SIZE));
   const currentPage = Math.min(page, maxPage);
-  const paginated = persons.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginated = sortedPersons.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const toggleSort = (field: PersonSortField) => {
+    if (sortField !== field) {
+      setSortField(field);
+      setSortOrder('asc');
+      setPage(1);
+      return;
+    }
+    if (sortOrder === 'asc') {
+      setSortOrder('desc');
+      setPage(1);
+      return;
+    }
+    setSortField(undefined);
+    setSortOrder('asc');
+    setPage(1);
+  };
+
+  const sortIndicator = (field: PersonSortField) => {
+    if (sortField !== field) return '';
+    return sortOrder === 'asc' ? '▲' : '▼';
+  };
 
   const validatePersonForm = (formData: FormData, setErrors: React.Dispatch<React.SetStateAction<PersonFormErrors>>) => {
     const errors: PersonFormErrors = {};
@@ -458,14 +540,14 @@ const PersonsPage = () => {
         <table>
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Имя</th>
-              <th>Цвет глаз</th>
-              <th>Цвет волос</th>
-              <th>Рост</th>
-              <th>Вес</th>
-              <th>Национальность</th>
-              <th>Локация</th>
+              <th onClick={() => toggleSort('id')} style={{ cursor: 'pointer' }}>ID {sortIndicator('id')}</th>
+              <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer' }}>Имя {sortIndicator('name')}</th>
+              <th onClick={() => toggleSort('eyeColor')} style={{ cursor: 'pointer' }}>Цвет глаз {sortIndicator('eyeColor')}</th>
+              <th onClick={() => toggleSort('hairColor')} style={{ cursor: 'pointer' }}>Цвет волос {sortIndicator('hairColor')}</th>
+              <th onClick={() => toggleSort('height')} style={{ cursor: 'pointer' }}>Рост {sortIndicator('height')}</th>
+              <th onClick={() => toggleSort('weight')} style={{ cursor: 'pointer' }}>Вес {sortIndicator('weight')}</th>
+              <th onClick={() => toggleSort('nationality')} style={{ cursor: 'pointer' }}>Национальность {sortIndicator('nationality')}</th>
+              <th onClick={() => toggleSort('locationName')} style={{ cursor: 'pointer' }}>Локация {sortIndicator('locationName')}</th>
               <th>Действия</th>
             </tr>
           </thead>

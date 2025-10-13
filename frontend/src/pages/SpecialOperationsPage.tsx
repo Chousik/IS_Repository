@@ -9,6 +9,7 @@ import { studyGroupsApi } from '../apiClient';
 import { loadAllStudyGroups } from '../services/entityLoaders';
 import { subscribeToEntityChanges } from '../services/events';
 import { useToast } from '../components/ToastProvider';
+import { ResponseError } from '../api/runtime';
 
 const semesterOptions: Semester[] = ['FIRST', 'SECOND', 'FOURTH', 'SIXTH', 'SEVENTH'];
 
@@ -57,7 +58,13 @@ const SpecialOperationsPage = () => {
       await refreshGroups();
       showToast('Группы удалены', 'success');
     } catch (err: any) {
-      showToast(err?.message ?? 'Не удалось удалить группы', 'error');
+      if (err instanceof ResponseError && err.response?.status === 404) {
+        showToast('Учебные группы для выбранного семестра не найдены', 'info');
+      } else if (err?.response?.status === 404) {
+        showToast('Учебные группы для выбранного семестра не найдены', 'info');
+      } else {
+        showToast(err?.message ?? 'Не удалось удалить группы', 'error');
+      }
     } finally {
       setLoading('deleteAll', false);
     }
@@ -70,7 +77,13 @@ const SpecialOperationsPage = () => {
       await refreshGroups();
       showToast('Группа удалена', 'success');
     } catch (err: any) {
-      showToast(err?.message ?? 'Не удалось удалить группу', 'error');
+      if (err instanceof ResponseError && err.response?.status === 404) {
+        showToast('Учебные группы для выбранного семестра не найдены', 'info');
+      } else if (err?.response?.status === 404) {
+        showToast('Учебные группы для выбранного семестра не найдены', 'info');
+      } else {
+        showToast(err?.message ?? 'Не удалось удалить группу', 'error');
+      }
     } finally {
       setLoading('deleteOne', false);
     }
