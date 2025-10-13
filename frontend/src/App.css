@@ -335,6 +335,12 @@ table tbody tr:hover {
   font-size: 13px;
 }
 
+.invalid-field,
+.invalid-field:focus {
+  border-color: rgba(255, 104, 136, 0.9);
+  box-shadow: 0 0 0 4px rgba(255, 104, 136, 0.2);
+}
+
 .form-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -358,6 +364,16 @@ table tbody tr:hover {
   background: rgba(41, 31, 53, 0.85);
   color: var(--hk-text);
   transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.number-input::-webkit-outer-spin-button,
+.number-input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.number-input[type='number'] {
+  -moz-appearance: textfield;
 }
 
 .input:focus,

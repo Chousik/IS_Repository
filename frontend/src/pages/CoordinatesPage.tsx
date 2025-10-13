@@ -23,6 +23,12 @@ type PagingState = {
   sortOrder: SortOrder;
 };
 
+type CoordinateFormErrors = {
+  x?: string;
+  y?: string;
+  replacement?: string;
+};
+
 const initialPage: PagedResult<CoordinatesResponse> = {
   content: [],
   page: 0,
@@ -43,6 +49,9 @@ const CoordinatesPage = () => {
   const [deleteContext, setDeleteContext] = useState<{ coordinate: CoordinatesResponse; groupIds: number[] } | null>(null);
   const [replacementId, setReplacementId] = useState<number | ''>('');
   const [confirmDelete, setConfirmDelete] = useState<CoordinatesResponse | null>(null);
+  const [createErrors, setCreateErrors] = useState<CoordinateFormErrors>({});
+  const [editErrors, setEditErrors] = useState<CoordinateFormErrors>({});
+  const [replacementError, setReplacementError] = useState<string | null>(null);
   const { showToast } = useToast();
 
   const fetchPage = useCallback(async () => {
@@ -118,16 +127,51 @@ const CoordinatesPage = () => {
     return paging.sortOrder === 'asc' ? '▲' : '▼';
   };
 
+  const validateCoordinateForm = (
+    formData: FormData,
+    setErrors: React.Dispatch<React.SetStateAction<CoordinateFormErrors>>
+  ): { x: number; y: number } | null => {
+    const errors: CoordinateFormErrors = {};
+    const rawX = formData.get('x');
+    const rawY = formData.get('y');
+    const parsedX = rawX !== null && String(rawX).trim() !== '' ? Number(rawX) : NaN;
+    const parsedY = rawY !== null && String(rawY).trim() !== '' ? Number(rawY) : NaN;
+
+    if (rawX === null || String(rawX).trim() === '') {
+      errors.x = 'Введите значение X';
+    } else if (Number.isNaN(parsedX)) {
+      errors.x = 'Значение X должно быть числом';
+    }
+
+    if (rawY === null || String(rawY).trim() === '') {
+      errors.y = 'Введите значение Y';
+    } else if (Number.isNaN(parsedY)) {
+      errors.y = 'Значение Y должно быть числом';
+    }
+
+    setErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      showToast('Исправьте ошибки в форме', 'warning');
+      return null;
+    }
+    return { x: parsedX, y: parsedY };
+  };
+
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    const valid = validateCoordinateForm(formData, setCreateErrors);
+    if (!valid) {
+      return;
+    }
     const payload: CoordinatesAddRequest = {
-      x: Number(formData.get('x')),
-      y: Number(formData.get('y')),
+      x: valid.x,
+      y: valid.y,
     };
     try {
       await coordinatesApi.apiV1CoordinatesPost({ coordinatesAddRequest: payload });
       setCreateOpen(false);
+      setCreateErrors({});
       await fetchPage();
       showToast('Координаты созданы', 'success');
     } catch (err: any) {
@@ -139,13 +183,18 @@ const CoordinatesPage = () => {
     event.preventDefault();
     if (!editCoordinate?.id) return;
     const formData = new FormData(event.currentTarget);
+    const valid = validateCoordinateForm(formData, setEditErrors);
+    if (!valid) {
+      return;
+    }
     const payload: CoordinatesUpdateRequest = {
-      x: Number(formData.get('x')),
-      y: Number(formData.get('y')),
+      x: valid.x,
+      y: valid.y,
     };
     try {
       await coordinatesApi.apiV1CoordinatesIdPatch({ id: editCoordinate.id, coordinatesUpdateRequest: payload });
       setEditCoordinate(null);
+      setEditErrors({});
       await fetchPage();
       showToast('Координаты обновлены', 'success');
     } catch (err: any) {
@@ -164,13 +213,17 @@ const CoordinatesPage = () => {
     }
     setDeleteContext({ coordinate, groupIds: affected });
     setReplacementId('');
+    setReplacementError(null);
   };
 
   const confirmDeleteWithReplacement = async () => {
     if (!deleteContext?.coordinate.id || replacementId === '') {
-      showToast('Выберите координаты для переназначения', 'warning');
+      const message = 'Выберите координаты для переназначения';
+      setReplacementError(message);
+      showToast(message, 'warning');
       return;
     }
+    setReplacementError(null);
     try {
       await Promise.all(
         deleteContext.groupIds.map((id) =>
@@ -180,6 +233,7 @@ const CoordinatesPage = () => {
       await coordinatesApi.apiV1CoordinatesIdDelete({ id: deleteContext.coordinate.id });
       setDeleteContext(null);
       setReplacementId('');
+      setReplacementError(null);
       await fetchPage();
       showToast('Координаты переназначены и удалены', 'success');
     } catch (err: any) {
@@ -220,7 +274,15 @@ const CoordinatesPage = () => {
     <div>
       <div className="section-heading">
         <h2>Координаты</h2>
-        <button className="primary-btn" onClick={() => setCreateOpen(true)}>Добавить</button>
+        <button
+          className="primary-btn"
+          onClick={() => {
+            setCreateErrors({});
+            setCreateOpen(true);
+          }}
+        >
+          Добавить
+        </button>
       </div>
 
       {error && <div className="error-banner">{error}</div>}
@@ -269,47 +331,115 @@ const CoordinatesPage = () => {
         </button>
       </div>
 
-      <div className="modal-overlay" style={{ display: createOpen ? 'flex' : 'none' }} onClick={() => setCreateOpen(false)}>
+      <div
+        className="modal-overlay"
+        style={{ display: createOpen ? 'flex' : 'none' }}
+        onClick={() => {
+          setCreateOpen(false);
+          setCreateErrors({});
+        }}
+      >
         <div className="modal-body" onClick={(event) => event.stopPropagation()}>
           <h3>Создание координат</h3>
-          <form className="form-grid" onSubmit={handleCreate}>
+          <form className="form-grid" onSubmit={handleCreate} noValidate>
             <div className="form-field">
               <label>X</label>
-              <input className="number-input" name="x" type="number" required />
+              <input
+                className="number-input"
+                name="x"
+                type="number"
+                onChange={() => setCreateErrors((prev) => ({ ...prev, x: undefined }))}
+              />
+              {createErrors.x && <div className="field-error">{createErrors.x}</div>}
             </div>
             <div className="form-field">
               <label>Y</label>
-              <input className="number-input" name="y" type="number" step="0.1" required />
+              <input
+                className="number-input"
+                name="y"
+                type="number"
+                step="0.1"
+                onChange={() => setCreateErrors((prev) => ({ ...prev, y: undefined }))}
+              />
+              {createErrors.y && <div className="field-error">{createErrors.y}</div>}
             </div>
             <div className="modal-footer">
-              <button type="button" className="secondary-btn" onClick={() => setCreateOpen(false)}>Отмена</button>
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => {
+                  setCreateOpen(false);
+                  setCreateErrors({});
+                }}
+              >
+                Отмена
+              </button>
               <button type="submit" className="primary-btn">Сохранить</button>
             </div>
           </form>
         </div>
       </div>
 
-      <div className="modal-overlay" style={{ display: editCoordinate ? 'flex' : 'none' }} onClick={() => setEditCoordinate(null)}>
+      <div
+        className="modal-overlay"
+        style={{ display: editCoordinate ? 'flex' : 'none' }}
+        onClick={() => {
+          setEditCoordinate(null);
+          setEditErrors({});
+        }}
+      >
         <div className="modal-body" onClick={(event) => event.stopPropagation()}>
           <h3>Редактирование координат</h3>
-          <form className="form-grid" onSubmit={handleUpdate}>
+          <form className="form-grid" onSubmit={handleUpdate} noValidate>
             <div className="form-field">
               <label>X</label>
-              <input className="number-input" name="x" type="number" defaultValue={editCoordinate?.x} required />
+              <input
+                className="number-input"
+                name="x"
+                type="number"
+                defaultValue={editCoordinate?.x}
+                onChange={() => setEditErrors((prev) => ({ ...prev, x: undefined }))}
+              />
+              {editErrors.x && <div className="field-error">{editErrors.x}</div>}
             </div>
             <div className="form-field">
               <label>Y</label>
-              <input className="number-input" name="y" type="number" step="0.1" defaultValue={editCoordinate?.y} required />
+              <input
+                className="number-input"
+                name="y"
+                type="number"
+                step="0.1"
+                defaultValue={editCoordinate?.y}
+                onChange={() => setEditErrors((prev) => ({ ...prev, y: undefined }))}
+              />
+              {editErrors.y && <div className="field-error">{editErrors.y}</div>}
             </div>
             <div className="modal-footer">
-              <button type="button" className="secondary-btn" onClick={() => setEditCoordinate(null)}>Отмена</button>
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={() => {
+                  setEditCoordinate(null);
+                  setEditErrors({});
+                }}
+              >
+                Отмена
+              </button>
               <button type="submit" className="primary-btn">Сохранить</button>
             </div>
           </form>
         </div>
       </div>
 
-      <div className="modal-overlay" style={{ display: deleteContext ? 'flex' : 'none' }} onClick={() => setDeleteContext(null)}>
+      <div
+        className="modal-overlay"
+        style={{ display: deleteContext ? 'flex' : 'none' }}
+        onClick={() => {
+          setDeleteContext(null);
+          setReplacementId('');
+          setReplacementError(null);
+        }}
+      >
         <div className="modal-body" onClick={(event) => event.stopPropagation()}>
           <h3>Переназначение координат</h3>
           {deleteContext && (
@@ -326,19 +456,32 @@ const CoordinatesPage = () => {
               <div className="form-field">
                 <label>Новые координаты</label>
                 <select
-                  className="select"
+                  className={`select${replacementError ? ' invalid-field' : ''}`}
                   value={replacementId}
-                  onChange={(event) => setReplacementId(event.target.value ? Number(event.target.value) : '')}
-                  required
+                  onChange={(event) => {
+                    setReplacementId(event.target.value ? Number(event.target.value) : '');
+                    setReplacementError(null);
+                  }}
                 >
                   <option value="">Выберите координаты</option>
                   {replacementOptions.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
+                {replacementError && <div className="field-error">{replacementError}</div>}
               </div>
               <div className="modal-footer">
-                <button type="button" className="secondary-btn" onClick={() => setDeleteContext(null)}>Отмена</button>
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={() => {
+                    setDeleteContext(null);
+                    setReplacementId('');
+                    setReplacementError(null);
+                  }}
+                >
+                  Отмена
+                </button>
                 <button type="submit" className="danger-btn">Переназначить и удалить</button>
               </div>
             </form>

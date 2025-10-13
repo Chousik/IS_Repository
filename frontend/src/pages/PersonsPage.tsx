@@ -19,6 +19,14 @@ const colorValues: Color[] = ['BLACK', 'YELLOW', 'ORANGE'];
 const countryValues: Country[] = ['UNITED_KINGDOM', 'FRANCE', 'INDIA', 'VATICAN'];
 type LocationMode = 'none' | 'existing' | 'new';
 
+type PersonFormErrors = {
+  name?: string;
+  hairColor?: string;
+  height?: string;
+  weight?: string;
+  location?: string;
+};
+
 const resolveLocationMode = (person?: PersonResponse | null): LocationMode => {
   if (!person?.location) {
     return 'none';
@@ -41,6 +49,8 @@ const PersonsPage = () => {
   const [confirmDelete, setConfirmDelete] = useState<PersonResponse | null>(null);
   const [createLocationMode, setCreateLocationMode] = useState<LocationMode>('none');
   const [editLocationMode, setEditLocationMode] = useState<LocationMode>('none');
+  const [createErrors, setCreateErrors] = useState<PersonFormErrors>({});
+  const [editErrors, setEditErrors] = useState<PersonFormErrors>({});
 
   const refreshData = useCallback(async () => {
     try {
@@ -80,18 +90,48 @@ const PersonsPage = () => {
   const currentPage = Math.min(page, maxPage);
   const paginated = persons.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
+  const validatePersonForm = (formData: FormData, setErrors: React.Dispatch<React.SetStateAction<PersonFormErrors>>) => {
+    const errors: PersonFormErrors = {};
+    const name = String(formData.get('name') ?? '').trim();
+    if (!name) {
+      errors.name = 'Введите ФИО';
+    }
+    if (!formData.get('hairColor')) {
+      errors.hairColor = 'Выберите цвет волос';
+    }
+    const height = Number(formData.get('height'));
+    if (!formData.get('height') || Number.isNaN(height) || height <= 0) {
+      errors.height = 'Укажите рост больше 0';
+    }
+    const weight = Number(formData.get('weight'));
+    if (!formData.get('weight') || Number.isNaN(weight) || weight <= 0) {
+      errors.weight = 'Укажите вес больше 0';
+    }
+    const locationMode = formData.get('locationMode');
+    if (locationMode === 'existing' && !formData.get('locationId')) {
+      errors.location = 'Выберите локацию для куратора';
+    }
+    if (
+      locationMode === 'new' &&
+      (!formData.get('locationName') || !formData.get('locationX') || !formData.get('locationY') || !formData.get('locationZ'))
+    ) {
+      errors.location = 'Заполните все поля новой локации';
+    }
+    setErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      showToast('Исправьте ошибки в форме', 'warning');
+      return false;
+    }
+    return true;
+  };
+
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    if (!validatePersonForm(formData, setCreateErrors)) {
+      return;
+    }
     const locationMode = formData.get('locationMode');
-    if (locationMode === 'existing' && !formData.get('locationId')) {
-      showToast('Выберите локацию для куратора', 'warning');
-      return;
-    }
-    if (locationMode === 'new' && (!formData.get('locationName') || !formData.get('locationX') || !formData.get('locationY') || !formData.get('locationZ'))) {
-      showToast('Заполните все поля новой локации', 'warning');
-      return;
-    }
     const payload: PersonAddRequest = {
       name: String(formData.get('name')),
       eyeColor: (formData.get('eyeColor') || undefined) as Color | undefined,
@@ -114,6 +154,7 @@ const PersonsPage = () => {
       await personsApi.apiV1PersonsPost({ personAddRequest: payload });
       setCreateOpen(false);
       setCreateLocationMode('none');
+      setCreateErrors({});
       await refreshData();
       showToast('Куратор создан', 'success');
     } catch (err: any) {
@@ -125,15 +166,10 @@ const PersonsPage = () => {
     event.preventDefault();
     if (!editPerson?.id) return;
     const formData = new FormData(event.currentTarget);
+    if (!validatePersonForm(formData, setEditErrors)) {
+      return;
+    }
     const locationMode = formData.get('locationMode');
-    if (locationMode === 'existing' && !formData.get('locationId')) {
-      showToast('Выберите локацию для куратора', 'warning');
-      return;
-    }
-    if (locationMode === 'new' && (!formData.get('locationName') || !formData.get('locationX') || !formData.get('locationY') || !formData.get('locationZ'))) {
-      showToast('Заполните все поля новой локации', 'warning');
-      return;
-    }
     const payload: PersonUpdateRequest = {
       name: String(formData.get('name')),
       eyeColor: (formData.get('eyeColor') || undefined) as Color | undefined,
@@ -157,6 +193,7 @@ const PersonsPage = () => {
       await personsApi.apiV1PersonsIdPatch({ id: editPerson.id, personUpdateRequest: payload });
       setEditPerson(null);
       setEditLocationMode('none');
+      setEditErrors({});
       await refreshData();
       showToast('Данные куратора обновлены', 'success');
     } catch (err: any) {
@@ -242,12 +279,20 @@ const PersonsPage = () => {
     locationMode: LocationMode,
     onLocationModeChange: (mode: LocationMode) => void,
     onSubmit: (event: FormEvent<HTMLFormElement>) => void,
-    onCancel: () => void
+    onCancel: () => void,
+    errors: PersonFormErrors,
+    setErrors: React.Dispatch<React.SetStateAction<PersonFormErrors>>
   ) => (
     <form className="form-grid" onSubmit={onSubmit}>
       <div className="form-field">
         <label>ФИО</label>
-        <input className="input" name="name" defaultValue={person?.name} required />
+        <input
+          className="input"
+          name="name"
+          defaultValue={person?.name}
+          onChange={() => setErrors((prev) => ({ ...prev, name: undefined }))}
+        />
+        {errors.name && <div className="field-error">{errors.name}</div>}
       </div>
       <div className="form-field">
         <label>Цвет глаз</label>
@@ -260,20 +305,43 @@ const PersonsPage = () => {
       </div>
       <div className="form-field">
         <label>Цвет волос</label>
-        <select className="select" name="hairColor" defaultValue={person?.hairColor ?? ''} required>
+        <select
+          className="select"
+          name="hairColor"
+          defaultValue={person?.hairColor ?? ''}
+          onChange={() => setErrors((prev) => ({ ...prev, hairColor: undefined }))}
+        >
           <option value="">—</option>
           {colorValues.map((value) => (
             <option key={value} value={value}>{value}</option>
           ))}
         </select>
+        {errors.hairColor && <div className="field-error">{errors.hairColor}</div>}
       </div>
       <div className="form-field">
         <label>Рост</label>
-        <input className="number-input" name="height" type="number" min={1} defaultValue={person?.height ?? 1} required />
+        <input
+          className="number-input"
+          name="height"
+          type="number"
+          min={1}
+          defaultValue={person?.height ?? 1}
+          onChange={() => setErrors((prev) => ({ ...prev, height: undefined }))}
+        />
+        {errors.height && <div className="field-error">{errors.height}</div>}
       </div>
       <div className="form-field">
         <label>Вес</label>
-        <input className="number-input" name="weight" type="number" min={1} step={0.1} defaultValue={person?.weight ?? 1} required />
+        <input
+          className="number-input"
+          name="weight"
+          type="number"
+          min={1}
+          step={0.1}
+          defaultValue={person?.weight ?? 1}
+          onChange={() => setErrors((prev) => ({ ...prev, weight: undefined }))}
+        />
+        {errors.weight && <div className="field-error">{errors.weight}</div>}
       </div>
       <div className="form-field">
         <label>Национальность</label>
@@ -290,7 +358,10 @@ const PersonsPage = () => {
           className="select"
           name="locationMode"
           value={locationMode}
-          onChange={(event) => onLocationModeChange(event.target.value as LocationMode)}
+          onChange={(event) => {
+            onLocationModeChange(event.target.value as LocationMode);
+            setErrors((prev) => ({ ...prev, location: undefined }));
+          }}
         >
           <option value="none">Без локации</option>
           <option value="existing">Существующая</option>
@@ -300,12 +371,18 @@ const PersonsPage = () => {
       {locationMode === 'existing' && (
         <div className="form-field full-width">
           <label>Выберите локацию</label>
-          <select className="select" name="locationId" defaultValue={person?.location?.id ?? ''} required>
+          <select
+            className="select"
+            name="locationId"
+            defaultValue={person?.location?.id ?? ''}
+            onChange={() => setErrors((prev) => ({ ...prev, location: undefined }))}
+          >
             <option value="">—</option>
             {locationOptions.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
+          {errors.location && <div className="field-error">{errors.location}</div>}
         </div>
       )}
       {locationMode === 'new' && (
@@ -317,7 +394,7 @@ const PersonsPage = () => {
               name="locationName"
               placeholder="Название"
               defaultValue={person?.location?.name ?? ''}
-              required
+              onChange={() => setErrors((prev) => ({ ...prev, location: undefined }))}
             />
             <input
               className="number-input"
@@ -325,7 +402,7 @@ const PersonsPage = () => {
               type="number"
               placeholder="X"
               defaultValue={person?.location?.x ?? ''}
-              required
+              onChange={() => setErrors((prev) => ({ ...prev, location: undefined }))}
             />
             <input
               className="number-input"
@@ -333,7 +410,7 @@ const PersonsPage = () => {
               type="number"
               placeholder="Y"
               defaultValue={person?.location?.y ?? ''}
-              required
+              onChange={() => setErrors((prev) => ({ ...prev, location: undefined }))}
             />
             <input
               className="number-input"
@@ -341,9 +418,10 @@ const PersonsPage = () => {
               type="number"
               placeholder="Z"
               defaultValue={person?.location?.z ?? ''}
-              required
+              onChange={() => setErrors((prev) => ({ ...prev, location: undefined }))}
             />
           </div>
+          {errors.location && <div className="field-error">{errors.location}</div>}
         </div>
       )}
       <div className="modal-footer">
@@ -445,7 +523,10 @@ const PersonsPage = () => {
           () => {
             setCreateOpen(false);
             setCreateLocationMode('none');
-          }
+            setCreateErrors({});
+          },
+          createErrors,
+          setCreateErrors
         )}
       </Modal>
 
@@ -466,7 +547,10 @@ const PersonsPage = () => {
           () => {
             setEditPerson(null);
             setEditLocationMode('none');
-          }
+            setEditErrors({});
+          },
+          editErrors,
+          setEditErrors
         )}
       </Modal>
 

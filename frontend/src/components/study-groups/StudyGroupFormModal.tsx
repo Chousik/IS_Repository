@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Modal from '../../components/Modal';
+import { useToast } from '../ToastProvider';
 import type {
   Color,
   CoordinatesResponse,
@@ -225,6 +226,7 @@ const StudyGroupFormModal = ({
   onCancel,
   onSubmit,
 }: StudyGroupFormModalProps) => {
+  const { showToast } = useToast();
   const [state, setState] = useState<GroupFormState>(buildInitialState(initialValues));
   const [submitting, setSubmitting] = useState(false);
   const [semesterError, setSemesterError] = useState<string | null>(null);
@@ -254,13 +256,51 @@ const StudyGroupFormModal = ({
     setState((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSubmit = async (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const trimmedName = state.name.trim();
+    if (!trimmedName) {
+      showToast('Введите название учебной группы', 'warning');
+      return;
+    }
     if (!state.semesterEnum) {
       setSemesterError('Выберите семестр');
+      showToast('Выберите семестр', 'warning');
       return;
     }
     setSemesterError(null);
+    if (state.coordinatesMode === 'existing' && !state.coordinatesId) {
+      showToast('Выберите координаты', 'warning');
+      return;
+    }
+    if (state.coordinatesMode === 'new') {
+      const coords = state.coordinates;
+      const xValid = coords && !Number.isNaN(coords.x);
+      const yValid = coords && !Number.isNaN(coords.y);
+      if (!xValid || !yValid) {
+        showToast('Заполните координаты X и Y', 'warning');
+        return;
+      }
+    }
+    if (state.studentsCount != null && state.studentsCount <= 0) {
+      showToast('Количество студентов должно быть больше 0', 'warning');
+      return;
+    }
+    if (state.expelledStudents <= 0) {
+      showToast('Количество отчисленных студентов должно быть больше 0', 'warning');
+      return;
+    }
+    if (state.transferredStudents <= 0) {
+      showToast('Количество переведённых студентов должно быть больше 0', 'warning');
+      return;
+    }
+    if (state.shouldBeExpelled <= 0) {
+      showToast('Кол-во к отчислению должно быть больше 0', 'warning');
+      return;
+    }
+    const formElement = event.currentTarget;
+    const invalid = Array.from(formElement.querySelectorAll('.invalid-field')) as HTMLElement[];
+    invalid.forEach((field) => field.classList.remove('invalid-field'));
     setSubmitting(true);
     try {
       if (mode === 'create') {
@@ -285,7 +325,7 @@ const StudyGroupFormModal = ({
       }}
       footer={null}
     >
-      <form onSubmit={handleSubmit} className="form-grid">
+      <form onSubmit={handleSubmit} className="form-grid" noValidate>
         <div className="form-field full-width">
           <label htmlFor="group-name">Название</label>
           <input
@@ -293,7 +333,6 @@ const StudyGroupFormModal = ({
             className="input"
             value={state.name}
             onChange={(event) => onChange('name', event.target.value)}
-            required
           />
         </div>
 
@@ -328,7 +367,6 @@ const StudyGroupFormModal = ({
             min={1}
             value={state.expelledStudents}
             onChange={(event) => onChange('expelledStudents', Number(event.target.value))}
-            required
           />
         </div>
 
@@ -340,7 +378,6 @@ const StudyGroupFormModal = ({
             min={1}
             value={state.transferredStudents}
             onChange={(event) => onChange('transferredStudents', Number(event.target.value))}
-            required
           />
         </div>
 
@@ -380,7 +417,6 @@ const StudyGroupFormModal = ({
             min={1}
             value={state.shouldBeExpelled}
             onChange={(event) => onChange('shouldBeExpelled', Number(event.target.value))}
-            required
           />
         </div>
 
@@ -446,7 +482,6 @@ const StudyGroupFormModal = ({
               onChange={(event) =>
                 onChange('coordinatesId', event.target.value ? Number(event.target.value) : undefined)
               }
-              required
             >
               <option value="">Выберите координаты</option>
               {coordinatesOptions.map((option) => (
@@ -471,7 +506,6 @@ const StudyGroupFormModal = ({
                     },
                   }))
                 }
-                required
               />
               <input
                 className="number-input"
@@ -487,7 +521,6 @@ const StudyGroupFormModal = ({
                     },
                   }))
                 }
-                required
               />
             </div>
           )}
@@ -511,7 +544,6 @@ const StudyGroupFormModal = ({
               onChange={(event) =>
                 onChange('groupAdminId', event.target.value ? Number(event.target.value) : undefined)
               }
-              required
             >
               <option value="">Выберите куратора</option>
               {personsOptions.map((option) => (
@@ -540,7 +572,6 @@ const StudyGroupFormModal = ({
                       },
                     }))
                   }
-                  required
                 />
               </div>
               <div className="form-field">
@@ -580,7 +611,6 @@ const StudyGroupFormModal = ({
                       },
                     }))
                   }
-                  required
                 >
                   {colorValues.map((value) => (
                     <option key={value} value={value}>
@@ -605,7 +635,6 @@ const StudyGroupFormModal = ({
                       },
                     }))
                   }
-                  required
                 />
               </div>
               <div className="form-field">
@@ -625,7 +654,6 @@ const StudyGroupFormModal = ({
                       },
                     }))
                   }
-                  required
                 />
               </div>
               <div className="form-field">
@@ -683,7 +711,6 @@ const StudyGroupFormModal = ({
                         },
                       }))
                     }
-                    required
                   >
                     <option value="">Выберите локацию</option>
                     {locationsOptions.map((option) => (
@@ -713,7 +740,6 @@ const StudyGroupFormModal = ({
                           },
                         }))
                       }
-                      required
                     />
                     <input
                       className="number-input"
@@ -734,7 +760,6 @@ const StudyGroupFormModal = ({
                           },
                         }))
                       }
-                      required
                     />
                     <input
                       className="number-input"
@@ -755,7 +780,6 @@ const StudyGroupFormModal = ({
                           },
                         }))
                       }
-                      required
                     />
                     <input
                       className="number-input"
@@ -776,7 +800,6 @@ const StudyGroupFormModal = ({
                           },
                         }))
                       }
-                      required
                     />
                   </div>
                 ) : null}
