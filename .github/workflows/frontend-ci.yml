@@ -21,7 +21,7 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Run lint
+      - name: Run lint (if configured)
         working-directory: frontend
         run: npm run lint
 
@@ -55,7 +55,6 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     needs: build
     steps:
       - uses: actions/download-artifact@v4
