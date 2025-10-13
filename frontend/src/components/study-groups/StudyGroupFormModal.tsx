@@ -30,7 +30,7 @@ type GroupFormState = {
   formOfEducation?: FormOfEducation;
   shouldBeExpelled: number;
   averageMark?: number;
-  semesterEnum: Semester;
+  semesterEnum: Semester | '';
   coordinatesMode: CoordinatesMode;
   coordinatesId?: number;
   coordinates?: { x: number; y: number };
@@ -70,7 +70,7 @@ function buildInitialState(initial?: StudyGroupResponse): GroupFormState {
       expelledStudents: 1,
       transferredStudents: 1,
       shouldBeExpelled: 1,
-      semesterEnum: 'FIRST',
+      semesterEnum: '',
       coordinatesMode: 'existing',
       adminMode: 'none',
       admin: {
@@ -134,7 +134,7 @@ function buildAddPayload(state: GroupFormState): StudyGroupAddRequest {
     formOfEducation: state.formOfEducation,
     shouldBeExpelled: state.shouldBeExpelled,
     averageMark: state.averageMark,
-    semesterEnum: state.semesterEnum,
+    semesterEnum: state.semesterEnum as Semester,
     coordinatesId: state.coordinatesMode === 'existing' ? state.coordinatesId : undefined,
     coordinates:
       state.coordinatesMode === 'new' && state.coordinates
@@ -180,7 +180,7 @@ function buildUpdatePayload(state: GroupFormState): StudyGroupUpdateRequest {
     shouldBeExpelled: state.shouldBeExpelled,
     averageMark: state.averageMark,
     clearAverageMark: state.clearAverageMark,
-    semesterEnum: state.semesterEnum,
+    semesterEnum: state.semesterEnum as Semester,
     coordinatesId: state.coordinatesMode === 'existing' ? state.coordinatesId : undefined,
     coordinates:
       state.coordinatesMode === 'new' && state.coordinates
@@ -257,6 +257,10 @@ const StudyGroupFormModal = ({
     event.preventDefault();
     setSubmitting(true);
     try {
+      if (!state.semesterEnum) {
+        alert('Пожалуйста, выберите семестр');
+        return;
+      }
       if (mode === 'create') {
         const payload = buildAddPayload(state);
         await onSubmit(payload);
@@ -406,8 +410,9 @@ const StudyGroupFormModal = ({
           <select
             className="select"
             value={state.semesterEnum}
-            onChange={(event) => onChange('semesterEnum', event.target.value as Semester)}
+            onChange={(event) => onChange('semesterEnum', event.target.value as Semester | '')}
           >
+            <option value="">—</option>
             {semesterValues.map((value) => (
               <option key={value} value={value}>
                 {value}
@@ -512,7 +517,7 @@ const StudyGroupFormModal = ({
 
         {state.adminMode === 'new' && state.admin && (
           <div className="form-field full-width">
-            <div className="form-grid single-column">
+            <div className="form-grid">
               <div className="form-field">
                 <label>Имя куратора</label>
                 <input

@@ -200,7 +200,7 @@ const LocationsPage = () => {
       </div>
 
       <Modal open={createOpen} title="Создание локации" onClose={() => setCreateOpen(false)} footer={null}>
-        <form className="form-grid single-column" onSubmit={handleCreate}>
+        <form className="form-grid" onSubmit={handleCreate}>
           <div className="form-field">
             <label>Название</label>
             <input className="input" name="name" required />
@@ -225,7 +225,7 @@ const LocationsPage = () => {
       </Modal>
 
       <Modal open={!!editLocation} title="Редактирование локации" onClose={() => setEditLocation(null)} footer={null}>
-        <form className="form-grid single-column" onSubmit={handleUpdate}>
+        <form className="form-grid" onSubmit={handleUpdate}>
           <div className="form-field">
             <label>Название</label>
             <input className="input" name="name" defaultValue={editLocation?.name} required />

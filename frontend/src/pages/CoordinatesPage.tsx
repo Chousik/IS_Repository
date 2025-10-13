@@ -251,7 +251,7 @@ const CoordinatesPage = () => {
       <div className="modal-overlay" style={{ display: createOpen ? 'flex' : 'none' }} onClick={() => setCreateOpen(false)}>
         <div className="modal-body" onClick={(event) => event.stopPropagation()}>
           <h3>Создание координат</h3>
-          <form className="form-grid single-column" onSubmit={handleCreate}>
+          <form className="form-grid" onSubmit={handleCreate}>
             <div className="form-field">
               <label>X</label>
               <input className="number-input" name="x" type="number" required />
@@ -271,7 +271,7 @@ const CoordinatesPage = () => {
       <div className="modal-overlay" style={{ display: editCoordinate ? 'flex' : 'none' }} onClick={() => setEditCoordinate(null)}>
         <div className="modal-body" onClick={(event) => event.stopPropagation()}>
           <h3>Редактирование координат</h3>
-          <form className="form-grid single-column" onSubmit={handleUpdate}>
+          <form className="form-grid" onSubmit={handleUpdate}>
             <div className="form-field">
               <label>X</label>
               <input className="number-input" name="x" type="number" defaultValue={editCoordinate?.x} required />

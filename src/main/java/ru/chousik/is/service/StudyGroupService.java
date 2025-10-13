@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.chousik.is.dto.mapper.CoordinatesMapper;
 import ru.chousik.is.dto.mapper.LocationMapper;
 import ru.chousik.is.dto.mapper.StudyGroupMapper;
@@ -40,6 +41,7 @@ import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
+@Transactional(readOnly = true)
 public class StudyGroupService {
 
     private final StudyGroupRepository studyGroupRepository;
@@ -73,6 +75,7 @@ public class StudyGroupService {
                 .toList();
     }
 
+    @Transactional
     public StudyGroupResponse create(StudyGroupAddRequest request) {
         validateCoordinatesInput(request.coordinatesId(), request.coordinates());
         validateGroupAdminInput(request.groupAdminId(), request.groupAdmin(), false);
@@ -103,6 +106,7 @@ public class StudyGroupService {
         return response;
     }
 
+    @Transactional
     public StudyGroupResponse update(Long id, StudyGroupUpdateRequest request) {
         validateUpdateRequest(request);
 
@@ -117,6 +121,7 @@ public class StudyGroupService {
         return response;
     }
 
+    @Transactional
     public List<StudyGroupResponse> updateMany(List<Long> ids, StudyGroupUpdateRequest request) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
@@ -146,6 +151,7 @@ public class StudyGroupService {
         return responses;
     }
 
+    @Transactional
     public StudyGroupResponse delete(Long id) {
         StudyGroup studyGroup = studyGroupRepository.findById(id).orElse(null);
         if (studyGroup == null) {
@@ -158,6 +164,7 @@ public class StudyGroupService {
         return response;
     }
 
+    @Transactional
     public void deleteMany(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return;
@@ -171,6 +178,7 @@ public class StudyGroupService {
         responses.forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "DELETED", response));
     }
 
+    @Transactional
     public long deleteAllBySemester(Semester semesterEnum) {
         if (semesterEnum == null) {
             throw new BadRequestException("Не указан semesterEnum");
@@ -187,6 +195,7 @@ public class StudyGroupService {
         return responses.size();
     }
 
+    @Transactional
     public StudyGroupResponse deleteOneBySemester(Semester semesterEnum) {
         if (semesterEnum == null) {
             throw new BadRequestException("Не указан semesterEnum");

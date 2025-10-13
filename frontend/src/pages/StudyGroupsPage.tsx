@@ -168,15 +168,20 @@ const StudyGroupsPage = () => {
   const handleSubmit = async (
     payload: StudyGroupAddRequest | { id: number; payload: StudyGroupUpdateRequest }
   ) => {
-    if ('semesterEnum' in payload) {
-      await studyGroupsApi.apiV1StudyGroupsPost({ studyGroupAddRequest: payload });
-    } else {
-      await studyGroupsApi.apiV1StudyGroupsIdPatch({
-        id: payload.id,
-        studyGroupUpdateRequest: payload.payload,
-      });
+    try {
+      if ('semesterEnum' in payload) {
+        await studyGroupsApi.apiV1StudyGroupsPost({ studyGroupAddRequest: payload });
+      } else {
+        await studyGroupsApi.apiV1StudyGroupsIdPatch({
+          id: payload.id,
+          studyGroupUpdateRequest: payload.payload,
+        });
+      }
+      await fetchPage();
+    } catch (error: any) {
+      alert(error?.message ?? 'Не удалось сохранить учебную группу');
+      throw error;
     }
-    await fetchPage();
   };
 
   const rows = useMemo(() => pagedData.content, [pagedData]);
@@ -203,6 +208,10 @@ const StudyGroupsPage = () => {
               <th onClick={() => handleSortToggle('semesterEnum')} style={{ cursor: 'pointer' }}>
                 Семестр {sortIndicator(paging.sortField, paging.sortOrder, 'semesterEnum')}
               </th>
+              <th onClick={() => handleSortToggle('formOfEducation')} style={{ cursor: 'pointer' }}>
+                Форма обучения {sortIndicator(paging.sortField, paging.sortOrder, 'formOfEducation')}
+              </th>
+              <th>Координаты</th>
               <th onClick={() => handleSortToggle('studentsCount')} style={{ cursor: 'pointer' }}>
                 Студентов {sortIndicator(paging.sortField, paging.sortOrder, 'studentsCount')}
               </th>
@@ -211,6 +220,12 @@ const StudyGroupsPage = () => {
               </th>
               <th onClick={() => handleSortToggle('transferredStudents')} style={{ cursor: 'pointer' }}>
                 Переведено {sortIndicator(paging.sortField, paging.sortOrder, 'transferredStudents')}
+              </th>
+              <th onClick={() => handleSortToggle('shouldBeExpelled')} style={{ cursor: 'pointer' }}>
+                Должны быть отчислены {sortIndicator(paging.sortField, paging.sortOrder, 'shouldBeExpelled')}
+              </th>
+              <th onClick={() => handleSortToggle('averageMark')} style={{ cursor: 'pointer' }}>
+                Средний балл {sortIndicator(paging.sortField, paging.sortOrder, 'averageMark')}
               </th>
               <th>Куратор</th>
               <th onClick={() => handleSortToggle('creationDate')} style={{ cursor: 'pointer' }}>
@@ -221,9 +236,9 @@ const StudyGroupsPage = () => {
           </thead>
           <tbody>
             {loadingTable ? (
-              <tr><td colSpan={9}>Загрузка...</td></tr>
+              <tr><td colSpan={13}>Загрузка...</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={9}>Нет данных</td></tr>
+              <tr><td colSpan={13}>Нет данных</td></tr>
             ) : (
               rows.map((group) => (
                 <tr key={group.id}
@@ -232,9 +247,15 @@ const StudyGroupsPage = () => {
                   <td>{group.id}</td>
                   <td>{group.name}</td>
                   <td>{group.semesterEnum}</td>
+                  <td>{group.formOfEducation ?? '—'}</td>
+                  <td>
+                    {group.coordinates ? `X: ${group.coordinates.x}, Y: ${group.coordinates.y}` : '—'}
+                  </td>
                   <td>{group.studentsCount ?? '—'}</td>
                   <td>{group.expelledStudents}</td>
                   <td>{group.transferredStudents}</td>
+                  <td>{group.shouldBeExpelled}</td>
+                  <td>{group.averageMark ?? '—'}</td>
                   <td>{group.groupAdmin?.name ?? '—'}</td>
                   <td>{formatDateTime(group.creationDate)}</td>
                   <td>
@@ -293,6 +314,7 @@ const StudyGroupsPage = () => {
             <button className="secondary-btn" onClick={() => setSelectedGroup(null)}>Закрыть</button>
           </div>
           <div className="drawer-field"><strong>Семестр:</strong> {selectedGroup.semesterEnum}</div>
+          <div className="drawer-field"><strong>Форма обучения:</strong> {selectedGroup.formOfEducation ?? '—'}</div>
           <div className="drawer-field"><strong>Координаты:</strong> X = {selectedGroup.coordinates?.x}, Y = {selectedGroup.coordinates?.y}</div>
           <div className="drawer-field"><strong>Студентов:</strong> {selectedGroup.studentsCount ?? '—'}</div>
           <div className="drawer-field"><strong>Отчислено:</strong> {selectedGroup.expelledStudents}</div>

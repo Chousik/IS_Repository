@@ -208,6 +208,16 @@ const PersonsPage = () => {
 
   const locationOptions = locations.map((location) => ({ label: `#${location.id} ${location.name}`, value: location.id! }));
 
+  const formatLocation = (location?: LocationResponse | null) => {
+    if (!location) {
+      return '—';
+    }
+    const coordinates = [location.x, location.y, location.z]
+      .filter((value) => value !== undefined && value !== null)
+      .join(', ');
+    return `#${location.id ?? '?'} ${location.name}${coordinates ? ` (${coordinates})` : ''}`;
+  };
+
   const renderPersonForm = (
     person: PersonResponse | undefined,
     locationMode: LocationMode,
@@ -215,7 +225,7 @@ const PersonsPage = () => {
     onSubmit: (event: FormEvent<HTMLFormElement>) => void,
     onCancel: () => void
   ) => (
-    <form className="form-grid single-column" onSubmit={onSubmit}>
+    <form className="form-grid" onSubmit={onSubmit}>
       <div className="form-field">
         <label>ФИО</label>
         <input className="input" name="name" defaultValue={person?.name} required />
@@ -280,24 +290,42 @@ const PersonsPage = () => {
         </div>
       )}
       {locationMode === 'new' && (
-        <>
-          <div className="form-field full-width">
-            <label>Название локации</label>
-            <input className="input" name="locationName" defaultValue={person?.location?.name ?? ''} required />
+        <div className="form-field full-width">
+          <label>Новая локация</label>
+          <div className="form-row">
+            <input
+              className="input"
+              name="locationName"
+              placeholder="Название"
+              defaultValue={person?.location?.name ?? ''}
+              required
+            />
+            <input
+              className="number-input"
+              name="locationX"
+              type="number"
+              placeholder="X"
+              defaultValue={person?.location?.x ?? ''}
+              required
+            />
+            <input
+              className="number-input"
+              name="locationY"
+              type="number"
+              placeholder="Y"
+              defaultValue={person?.location?.y ?? ''}
+              required
+            />
+            <input
+              className="number-input"
+              name="locationZ"
+              type="number"
+              placeholder="Z"
+              defaultValue={person?.location?.z ?? ''}
+              required
+            />
           </div>
-          <div className="form-field full-width">
-            <label>Координата X</label>
-            <input className="number-input" name="locationX" type="number" defaultValue={person?.location?.x ?? ''} required />
-          </div>
-          <div className="form-field full-width">
-            <label>Координата Y</label>
-            <input className="number-input" name="locationY" type="number" defaultValue={person?.location?.y ?? ''} required />
-          </div>
-          <div className="form-field full-width">
-            <label>Координата Z</label>
-            <input className="number-input" name="locationZ" type="number" defaultValue={person?.location?.z ?? ''} required />
-          </div>
-        </>
+        </div>
       )}
       <div className="modal-footer">
         <button type="button" className="secondary-btn" onClick={onCancel}>Отмена</button>
@@ -329,27 +357,31 @@ const PersonsPage = () => {
             <tr>
               <th>ID</th>
               <th>Имя</th>
+              <th>Цвет глаз</th>
               <th>Цвет волос</th>
               <th>Рост</th>
               <th>Вес</th>
+              <th>Национальность</th>
               <th>Локация</th>
-              <th></th>
+              <th>Действия</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7}>Загрузка...</td></tr>
+              <tr><td colSpan={9}>Загрузка...</td></tr>
             ) : paginated.length === 0 ? (
-              <tr><td colSpan={7}>Нет данных</td></tr>
+              <tr><td colSpan={9}>Нет данных</td></tr>
             ) : (
               paginated.map((person) => (
                 <tr key={person.id}>
                   <td>{person.id}</td>
                   <td>{person.name}</td>
+                  <td>{person.eyeColor ?? '—'}</td>
                   <td>{person.hairColor}</td>
                   <td>{person.height}</td>
                   <td>{person.weight}</td>
-                  <td>{person.location?.name ?? '—'}</td>
+                  <td>{person.nationality ?? '—'}</td>
+                  <td>{formatLocation(person.location)}</td>
                   <td>
                     <div className="form-inline">
                       <button
