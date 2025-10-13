@@ -22,7 +22,7 @@ function App() {
   return (
     <div className="app-container">
       <aside className="app-sidebar">
-        <div className="app-brand">Hello Kitty IS</div>
+        <div className="app-brand">Kuromi IS</div>
         <nav className="app-menu">
           {NAV_ITEMS.map((item) => (
             <button
@@ -36,7 +36,7 @@ function App() {
         </nav>
       </aside>
       <main className="app-main">
-        <header className="app-header">Волшебная академия Hello Kitty</header>
+        <header className="app-header">Темная академия Kuromi</header>
         <section className="app-content">
           {activeView === 'study-groups' && <StudyGroupsPage />}
           {activeView === 'coordinates' && <CoordinatesPage />}
