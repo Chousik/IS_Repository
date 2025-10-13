@@ -1,3 +1,4 @@
+
 spring:
   application:
     name: IS-project
@@ -14,3 +15,5 @@ spring:
       eclipselink.ddl-generation.output-mode: database
       eclipselink.default-schema: public
       eclipselink.logging.level: FINE
+server:
+  port: 8041
