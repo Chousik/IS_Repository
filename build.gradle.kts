@@ -23,7 +23,9 @@ configurations {
 repositories {
     mavenCentral()
 }
-
+configurations.all {
+    exclude(group = "org.glassfish.jaxb", module = "jaxb-core")
+}
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa"){
         exclude(group = "org.hibernate", module = "hibernate-core")
