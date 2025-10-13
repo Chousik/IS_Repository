@@ -69,23 +69,23 @@ jobs:
           name: backend-jar
           path: build/libs/*.jar
 
-#  deploy:
-#    runs-on: ubuntu-latest
-#    needs: build
-#    steps:
-#      - name: Download jar artifact
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: backend-jar
-#          path: dist
-#
-#      - name: Deploy jar over SSH
-#        uses: appleboy/scp-action@v0.1.7
-#        with:
-#          host: ${{ secrets.SSH_HOST }}
-#          username: ${{ secrets.SSH_USER }}
-#          key: ${{ secrets.SSH_PRIVATE_KEY }}
-#          port: ${{ secrets.SSH_PORT }}
-#          source: "dist/*.jar"
-#          target: ${{ secrets.SSH_TARGET_PATH }}
-#          overwrite: true
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download jar artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jar
+          path: dist
+
+      - name: Deploy jar over SSH
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "dist/*.jar"
+          target: "~/is"
+          overwrite: true
