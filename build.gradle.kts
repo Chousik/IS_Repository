@@ -1,5 +1,8 @@
+import org.gradle.api.plugins.quality.Checkstyle
+
 plugins {
     java
+    checkstyle
     id("org.springframework.boot") version "3.5.5"
     id("io.spring.dependency-management") version "1.1.7"
 }
@@ -52,6 +55,18 @@ dependencies {
     implementation("com.nimbusds:nimbus-jose-jwt:10.3.1")
     implementation("io.swagger.core.v3:swagger-annotations:2.2.22")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
+}
+
+checkstyle {
+    toolVersion = "10.21.1"
+}
+
+tasks.withType<Checkstyle> {
+    configFile = file("config/checkstyle/checkstyle.xml")
+    reports {
+        xml.required.set(true)
+        html.required.set(false)
+    }
 }
 
 tasks.withType<Test> {
