@@ -1,0 +1,954 @@
+openapi: 3.0.3
+info:
+  title: IS Project API
+  version: 1.0.0
+  description: |
+    Бэкенд для управления учебными группами и связанными сущностями.
+servers:
+  - url: /
+paths:
+  /api/v1/coordinates:
+    get:
+      tags: [Coordinates]
+      summary: Получить список координат
+      description: Возвращает постраничный список координат с сортировкой.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortDirectionParam'
+      responses:
+        '200':
+          description: Список координат
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedCoordinatesResponse'
+    post:
+      tags: [Coordinates]
+      summary: Создать координаты
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoordinatesAddRequest'
+      responses:
+        '200':
+          description: Созданные координаты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoordinatesResponse'
+    patch:
+      tags: [Coordinates]
+      summary: Массово обновить координаты
+      parameters:
+        - $ref: '#/components/parameters/IdsParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoordinatesUpdateRequest'
+      responses:
+        '200':
+          description: Обновлённые координаты
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CoordinatesResponse'
+    delete:
+      tags: [Coordinates]
+      summary: Массово удалить координаты
+      parameters:
+        - $ref: '#/components/parameters/IdsParam'
+      responses:
+        '204':
+          description: Координаты удалены
+  /api/v1/coordinates/{id}:
+    get:
+      tags: [Coordinates]
+      summary: Получить координаты по идентификатору
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Найденные координаты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoordinatesResponse'
+    patch:
+      tags: [Coordinates]
+      summary: Обновить координаты
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoordinatesUpdateRequest'
+      responses:
+        '200':
+          description: Обновлённые координаты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoordinatesResponse'
+    delete:
+      tags: [Coordinates]
+      summary: Удалить координаты
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Удалённые координаты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoordinatesResponse'
+  /api/v1/coordinates/by-ids:
+    get:
+      tags: [Coordinates]
+      summary: Получить несколько координат
+      parameters:
+        - $ref: '#/components/parameters/IdsParam'
+      responses:
+        '200':
+          description: Список координат
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CoordinatesResponse'
+  /api/v1/locations:
+    get:
+      tags: [Locations]
+      summary: Получить список локаций
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortDirectionParam'
+      responses:
+        '200':
+          description: Список локаций
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedLocationResponse'
+    post:
+      tags: [Locations]
+      summary: Создать локацию
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationAddRequest'
+      responses:
+        '200':
+          description: Созданная локация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationResponse'
+    patch:
+      tags: [Locations]
+      summary: Массово обновить локации
+      parameters:
+        - $ref: '#/components/parameters/IdsParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationUpdateRequest'
+      responses:
+        '200':
+          description: Обновлённые локации
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LocationResponse'
+    delete:
+      tags: [Locations]
+      summary: Массово удалить локации
+      parameters:
+        - $ref: '#/components/parameters/IdsParam'
+      responses:
+        '204':
+          description: Локации удалены
+  /api/v1/locations/{id}:
+    get:
+      tags: [Locations]
+      summary: Получить локацию по идентификатору
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Найденная локация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationResponse'
+    patch:
+      tags: [Locations]
+      summary: Обновить локацию
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationUpdateRequest'
+      responses:
+        '200':
+          description: Обновлённая локация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationResponse'
+    delete:
+      tags: [Locations]
+      summary: Удалить локацию
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Удалённая локация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationResponse'
+  /api/v1/locations/by-ids:
+    get:
+      tags: [Locations]
+      summary: Получить несколько локаций
+      parameters:
+        - $ref: '#/components/parameters/IdsParam'
+      responses:
+        '200':
+          description: Список локаций
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LocationResponse'
+  /api/v1/persons:
+    get:
+      tags: [Persons]
+      summary: Получить список людей
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortDirectionParam'
+      responses:
+        '200':
+          description: Список людей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedPersonResponse'
+    post:
+      tags: [Persons]
+      summary: Создать человека
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonAddRequest'
+      responses:
+        '200':
+          description: Созданный человек
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonResponse'
+    patch:
+      tags: [Persons]
+      summary: Массово обновить людей
+      parameters:
+        - $ref: '#/components/parameters/IdsParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonUpdateRequest'
+      responses:
+        '200':
+          description: Обновлённые люди
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PersonResponse'
+    delete:
+      tags: [Persons]
+      summary: Массово удалить людей
+      parameters:
+        - $ref: '#/components/parameters/IdsParam'
+      responses:
+        '204':
+          description: Люди удалены
+  /api/v1/persons/{id}:
+    get:
+      tags: [Persons]
+      summary: Получить человека по идентификатору
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Найденный человек
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonResponse'
+    patch:
+      tags: [Persons]
+      summary: Обновить человека
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonUpdateRequest'
+      responses:
+        '200':
+          description: Обновлённый человек
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonResponse'
+    delete:
+      tags: [Persons]
+      summary: Удалить человека
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Удалённый человек
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonResponse'
+  /api/v1/persons/by-ids:
+    get:
+      tags: [Persons]
+      summary: Получить несколько людей
+      parameters:
+        - $ref: '#/components/parameters/IdsParam'
+      responses:
+        '200':
+          description: Список людей
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PersonResponse'
+  /api/v1/study-groups:
+    get:
+      tags: [StudyGroups]
+      summary: Получить список учебных групп
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/SortByParam'
+        - $ref: '#/components/parameters/SortDirectionParam'
+      responses:
+        '200':
+          description: Список учебных групп
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedStudyGroupResponse'
+    post:
+      tags: [StudyGroups]
+      summary: Создать учебную группу
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudyGroupAddRequest'
+      responses:
+        '200':
+          description: Созданная группа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroupResponse'
+    patch:
+      tags: [StudyGroups]
+      summary: Массово обновить учебные группы
+      parameters:
+        - $ref: '#/components/parameters/IdsParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudyGroupUpdateRequest'
+      responses:
+        '200':
+          description: Обновлённые группы
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StudyGroupResponse'
+    delete:
+      tags: [StudyGroups]
+      summary: Массово удалить учебные группы
+      parameters:
+        - $ref: '#/components/parameters/IdsParam'
+      responses:
+        '204':
+          description: Группы удалены
+  /api/v1/study-groups/{id}:
+    get:
+      tags: [StudyGroups]
+      summary: Получить учебную группу по идентификатору
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Найденная группа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroupResponse'
+    patch:
+      tags: [StudyGroups]
+      summary: Обновить учебную группу
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudyGroupUpdateRequest'
+      responses:
+        '200':
+          description: Обновлённая группа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroupResponse'
+    delete:
+      tags: [StudyGroups]
+      summary: Удалить учебную группу
+      parameters:
+        - $ref: '#/components/parameters/IdPathParam'
+      responses:
+        '200':
+          description: Удалённая группа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroupResponse'
+  /api/v1/study-groups/by-ids:
+    get:
+      tags: [StudyGroups]
+      summary: Получить несколько учебных групп
+      parameters:
+        - $ref: '#/components/parameters/IdsParam'
+      responses:
+        '200':
+          description: Список групп
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StudyGroupResponse'
+  /api/v1/study-groups/by-semester:
+    delete:
+      tags: [StudyGroups]
+      summary: Удалить все группы по семестру
+      parameters:
+        - in: query
+          name: semesterEnum
+          required: true
+          schema:
+            $ref: '#/components/schemas/Semester'
+      responses:
+        '200':
+          description: Количество удалённых групп
+          content:
+            application/json:
+              schema:
+                type: integer
+                format: int64
+  /api/v1/study-groups/by-semester/one:
+    delete:
+      tags: [StudyGroups]
+      summary: Удалить одну группу по семестру
+      parameters:
+        - in: query
+          name: semesterEnum
+          required: true
+          schema:
+            $ref: '#/components/schemas/Semester'
+      responses:
+        '200':
+          description: Удалённая группа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroupResponse'
+  /api/v1/study-groups/stats/should-be-expelled:
+    get:
+      tags: [StudyGroups]
+      summary: Группировка по shouldBeExpelled
+      responses:
+        '200':
+          description: Статистика по полю shouldBeExpelled
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StudyGroupShouldBeExpelledGroupResponse'
+  /api/v1/study-groups/stats/expelled-total:
+    get:
+      tags: [StudyGroups]
+      summary: Посчитать общее число отчисленных студентов
+      responses:
+        '200':
+          description: Общее количество отчисленных студентов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGroupExpelledTotalResponse'
+components:
+  parameters:
+    IdPathParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    IdsParam:
+      name: ids
+      in: query
+      required: true
+      schema:
+        type: array
+        items:
+          type: integer
+          format: int64
+      style: form
+      explode: true
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+      description: Номер страницы (0-based)
+    SizeParam:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+      description: Размер страницы
+    SortParam:
+      name: sort
+      in: query
+      schema:
+        type: string
+      description: Нативный параметр Spring для сортировки
+    SortByParam:
+      name: sortBy
+      in: query
+      schema:
+        type: string
+      description: Поле сортировки
+    SortDirectionParam:
+      name: direction
+      in: query
+      schema:
+        type: string
+        enum: [asc, desc]
+      description: Направление сортировки
+  schemas:
+    CoordinatesAddRequest:
+      type: object
+      required: [x, y]
+      properties:
+        x:
+          type: integer
+          format: int64
+        y:
+          type: number
+          format: float
+    CoordinatesUpdateRequest:
+      type: object
+      properties:
+        x:
+          type: integer
+          format: int64
+        y:
+          type: number
+          format: float
+    CoordinatesResponse:
+      type: object
+      required: [id, x, y]
+      properties:
+        id:
+          type: integer
+          format: int64
+        x:
+          type: integer
+          format: int64
+        y:
+          type: number
+          format: float
+    LocationAddRequest:
+      type: object
+      required: [x, y, z, name]
+      properties:
+        x:
+          type: integer
+        y:
+          type: number
+          format: double
+        z:
+          type: number
+          format: double
+        name:
+          type: string
+    LocationUpdateRequest:
+      type: object
+      properties:
+        x:
+          type: integer
+        y:
+          type: number
+          format: double
+        z:
+          type: number
+          format: double
+        name:
+          type: string
+    LocationResponse:
+      type: object
+      required: [id, x, y, z, name]
+      properties:
+        id:
+          type: integer
+          format: int64
+        x:
+          type: integer
+        y:
+          type: number
+          format: double
+        z:
+          type: number
+          format: double
+        name:
+          type: string
+    PersonAddRequest:
+      type: object
+      required: [name, hairColor, height, weight]
+      properties:
+        name:
+          type: string
+        eyeColor:
+          $ref: '#/components/schemas/Color'
+        hairColor:
+          $ref: '#/components/schemas/Color'
+        locationId:
+          type: integer
+          format: int64
+        location:
+          $ref: '#/components/schemas/LocationAddRequest'
+        height:
+          type: integer
+          format: int64
+        weight:
+          type: number
+          format: float
+        nationality:
+          $ref: '#/components/schemas/Country'
+    PersonUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        eyeColor:
+          $ref: '#/components/schemas/Color'
+        hairColor:
+          $ref: '#/components/schemas/Color'
+        locationId:
+          type: integer
+          format: int64
+        location:
+          $ref: '#/components/schemas/LocationAddRequest'
+        removeLocation:
+          type: boolean
+        height:
+          type: integer
+          format: int64
+        weight:
+          type: number
+          format: float
+        nationality:
+          $ref: '#/components/schemas/Country'
+    PersonResponse:
+      type: object
+      required: [id, name, hairColor, height, weight]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        eyeColor:
+          $ref: '#/components/schemas/Color'
+        hairColor:
+          $ref: '#/components/schemas/Color'
+        location:
+          $ref: '#/components/schemas/LocationResponse'
+        height:
+          type: integer
+          format: int64
+        weight:
+          type: number
+          format: float
+        nationality:
+          $ref: '#/components/schemas/Country'
+    StudyGroupAddRequest:
+      type: object
+      required:
+        - name
+        - expelledStudents
+        - transferredStudents
+        - shouldBeExpelled
+        - semesterEnum
+      properties:
+        name:
+          type: string
+        coordinatesId:
+          type: integer
+          format: int64
+        coordinates:
+          $ref: '#/components/schemas/CoordinatesAddRequest'
+        studentsCount:
+          type: integer
+          format: int64
+        expelledStudents:
+          type: integer
+          format: int64
+        transferredStudents:
+          type: integer
+          format: int64
+        formOfEducation:
+          $ref: '#/components/schemas/FormOfEducation'
+        shouldBeExpelled:
+          type: integer
+          format: int64
+        averageMark:
+          type: integer
+          format: int32
+        semesterEnum:
+          $ref: '#/components/schemas/Semester'
+        groupAdminId:
+          type: integer
+          format: int64
+        groupAdmin:
+          $ref: '#/components/schemas/PersonAddRequest'
+    StudyGroupUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        coordinatesId:
+          type: integer
+          format: int64
+        coordinates:
+          $ref: '#/components/schemas/CoordinatesAddRequest'
+        studentsCount:
+          type: integer
+          format: int64
+        clearStudentsCount:
+          type: boolean
+        expelledStudents:
+          type: integer
+          format: int64
+        transferredStudents:
+          type: integer
+          format: int64
+        formOfEducation:
+          $ref: '#/components/schemas/FormOfEducation'
+        clearFormOfEducation:
+          type: boolean
+        shouldBeExpelled:
+          type: integer
+          format: int64
+        averageMark:
+          type: integer
+          format: int32
+        clearAverageMark:
+          type: boolean
+        semesterEnum:
+          $ref: '#/components/schemas/Semester'
+        groupAdminId:
+          type: integer
+          format: int64
+        groupAdmin:
+          $ref: '#/components/schemas/PersonAddRequest'
+        removeGroupAdmin:
+          type: boolean
+    StudyGroupResponse:
+      type: object
+      required:
+        - id
+        - name
+        - coordinates
+        - creationDate
+        - expelledStudents
+        - transferredStudents
+        - shouldBeExpelled
+        - semesterEnum
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        coordinates:
+          $ref: '#/components/schemas/CoordinatesResponse'
+        creationDate:
+          type: string
+          format: date-time
+        studentsCount:
+          type: integer
+          format: int64
+        expelledStudents:
+          type: integer
+          format: int64
+        transferredStudents:
+          type: integer
+          format: int64
+        formOfEducation:
+          $ref: '#/components/schemas/FormOfEducation'
+        shouldBeExpelled:
+          type: integer
+          format: int64
+        averageMark:
+          type: integer
+          format: int32
+        semesterEnum:
+          $ref: '#/components/schemas/Semester'
+        groupAdmin:
+          $ref: '#/components/schemas/PersonResponse'
+    StudyGroupShouldBeExpelledGroupResponse:
+      type: object
+      required: [shouldBeExpelled, count]
+      properties:
+        shouldBeExpelled:
+          type: integer
+          format: int64
+        count:
+          type: integer
+          format: int64
+    StudyGroupExpelledTotalResponse:
+      type: object
+      required: [totalExpelledStudents]
+      properties:
+        totalExpelledStudents:
+          type: integer
+          format: int64
+    PagedCoordinatesResponse:
+      allOf:
+        - $ref: '#/components/schemas/PageModel'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/CoordinatesResponse'
+    PagedLocationResponse:
+      allOf:
+        - $ref: '#/components/schemas/PageModel'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/LocationResponse'
+    PagedPersonResponse:
+      allOf:
+        - $ref: '#/components/schemas/PageModel'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/PersonResponse'
+    PagedStudyGroupResponse:
+      allOf:
+        - $ref: '#/components/schemas/PageModel'
+        - type: object
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/StudyGroupResponse'
+    PageModel:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            type: object
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    Color:
+      type: string
+      enum: [BLACK, YELLOW, ORANGE]
+    Country:
+      type: string
+      enum: [UNITED_KINGDOM, FRANCE, INDIA, VATICAN]
+    FormOfEducation:
+      type: string
+      enum: [DISTANCE_EDUCATION, FULL_TIME_EDUCATION, EVENING_CLASSES]
+    Semester:
+      type: string
+      enum: [FIRST, SECOND, FOURTH, SIXTH, SEVENTH]
