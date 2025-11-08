@@ -3,7 +3,6 @@ package ru.chousik.is.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PagedModel;
@@ -17,7 +16,6 @@ import ru.chousik.is.api.LocationsApi;
 import ru.chousik.is.dto.request.LocationAddRequest;
 import ru.chousik.is.dto.request.LocationUpdateRequest;
 import ru.chousik.is.dto.response.LocationResponse;
-import ru.chousik.is.exception.BadRequestException;
 import ru.chousik.is.service.LocationService;
 
 import java.util.List;
@@ -26,10 +24,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @RequestMapping
 @RequiredArgsConstructor
-public class LocationController implements LocationsApi {
-
-    private static final int DEFAULT_PAGE = 0;
-    private static final int DEFAULT_SIZE = 20;
+public class LocationController extends PageHelper implements LocationsApi {
 
     private final LocationService locationService;
 
@@ -92,29 +87,5 @@ public class LocationController implements LocationsApi {
     public ResponseEntity<LocationResponse> apiV1LocationsPost(
             @Valid @RequestBody LocationAddRequest locationAddRequest) {
         return ResponseEntity.ok(locationService.create(locationAddRequest));
-    }
-
-    private Pageable toPageable(Integer page, Integer size) {
-        int pageNumber = page == null ? DEFAULT_PAGE : page;
-        int pageSize = size == null ? DEFAULT_SIZE : size;
-        return PageRequest.of(pageNumber, pageSize);
-    }
-
-    private String resolveSortField(String sortBy, String sort) {
-        if (sortBy != null && !sortBy.isBlank()) {
-            return sortBy;
-        }
-        return (sort != null && !sort.isBlank()) ? sort : null;
-    }
-
-    private Sort.Direction resolveDirection(String direction) {
-        if (direction == null || direction.isBlank()) {
-            return Sort.Direction.ASC;
-        }
-        try {
-            return Sort.Direction.fromString(direction);
-        } catch (IllegalArgumentException ex) {
-            throw new BadRequestException("Некорректное направление сортировки '%s'".formatted(direction));
-        }
     }
 }
