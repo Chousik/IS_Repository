@@ -343,7 +343,7 @@ const StudyGroupsPage = () => {
       )}
 
       <StudyGroupFormModal
-        open={formOpen}
+        isOpen={formOpen}
         mode={formMode}
         initialValues={editingGroup}
         coordinates={coordinates}
