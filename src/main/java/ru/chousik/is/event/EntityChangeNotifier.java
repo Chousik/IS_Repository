@@ -3,6 +3,7 @@ package ru.chousik.is.event;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -14,6 +15,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class EntityChangeNotifier {
 
@@ -49,11 +51,14 @@ public class EntityChangeNotifier {
             session.sendMessage(new TextMessage(payload));
             return true;
         } catch (JsonProcessingException e) {
+            log.error("Ошибка сериализации EntityChange для сессии {}: {}", session.getId(), e.getMessage(), e);
             return true;
         } catch (IOException e) {
+            log.warn("Ошибка при отправке сообщения клиенту {}: {}", session.getId(), e.getMessage(), e);
             try {
                 session.close();
-            } catch (IOException ignored) {
+            } catch (IOException closeEx) {
+                log.warn("Не удалось закрыть WebSocketSession {}: {}", session.getId(), closeEx.getMessage(), closeEx);
             }
             return false;
         }
