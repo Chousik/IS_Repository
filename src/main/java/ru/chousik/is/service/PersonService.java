@@ -270,7 +270,7 @@ public class PersonService {
             Sort sort = Sort.by(sortDirection, sortField);
             return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         } catch (PropertyReferenceException e) {
-            throw new BadRequestException("Неизвестное поле сортировки '%s'".formatted(sortField));
+            throw new BadRequestException("Неизвестное поле сортировки '%s'".formatted(sortField), e);
         }
     }
 
