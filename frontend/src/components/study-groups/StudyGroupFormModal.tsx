@@ -1,23 +1,25 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Modal from '../../components/Modal';
 import { useToast } from '../ToastProvider';
-import type {
+import {
   Color,
-  CoordinatesResponse,
   Country,
   FormOfEducation,
+  Semester,
+} from '../../api/models';
+import type {
+  CoordinatesResponse,
   LocationResponse,
   PersonResponse,
-  Semester,
   StudyGroupAddRequest,
   StudyGroupResponse,
   StudyGroupUpdateRequest,
 } from '../../api/models';
 
-const colorValues: Color[] = ['BLACK', 'YELLOW', 'ORANGE'];
-const countryValues: Country[] = ['UNITED_KINGDOM', 'FRANCE', 'INDIA', 'VATICAN'];
-const educationValues: FormOfEducation[] = ['DISTANCE_EDUCATION', 'FULL_TIME_EDUCATION', 'EVENING_CLASSES'];
-const semesterValues: Semester[] = ['FIRST', 'SECOND', 'FOURTH', 'SIXTH', 'SEVENTH'];
+const colorValues: Color[] = Object.values(Color);
+const countryValues: Country[] = Object.values(Country);
+const educationValues: FormOfEducation[] = Object.values(FormOfEducation);
+const semesterValues: Semester[] = Object.values(Semester);
 
 type CoordinatesMode = 'existing' | 'new';
 type AdminMode = 'none' | 'existing' | 'new';
@@ -77,7 +79,7 @@ type GroupFormErrors = {
 };
 
 interface StudyGroupFormModalProps {
-  open: boolean;
+  isOpen: boolean;
   mode: 'create' | 'edit';
   initialValues?: StudyGroupResponse;
   coordinates: CoordinatesResponse[];
@@ -240,7 +242,7 @@ function buildUpdatePayload(state: GroupFormState): StudyGroupUpdateRequest {
 }
 
 const StudyGroupFormModal = ({
-  open,
+  isOpen,
   mode,
   initialValues,
   coordinates,
@@ -255,11 +257,11 @@ const StudyGroupFormModal = ({
   const [errors, setErrors] = useState<GroupFormErrors>({});
 
   useEffect(() => {
-    if (open) {
+    if (isOpen) {
       setState(buildInitialState(initialValues));
       setErrors({});
     }
-  }, [open, initialValues]);
+  }, [isOpen, initialValues]);
 
   const coordinatesOptions = useMemo(
     () => coordinates.map((coord) => ({ value: coord.id, label: `#${coord.id} (${coord.x}; ${coord.y})` })),
@@ -414,7 +416,7 @@ const StudyGroupFormModal = ({
 
   return (
     <Modal
-      open={open}
+      open={isOpen}
       title={mode === 'create' ? 'Создание учебной группы' : 'Редактирование учебной группы'}
       onClose={() => {
         if (!submitting) onCancel();
