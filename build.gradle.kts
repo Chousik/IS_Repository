@@ -1,4 +1,10 @@
 import org.gradle.api.plugins.quality.Checkstyle
+import org.gradle.api.tasks.Delete
+import org.gradle.api.tasks.Exec
+import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.kotlin.dsl.getByType
+import org.gradle.kotlin.dsl.registering
 
 plugins {
     java
@@ -25,6 +31,105 @@ configurations {
 
 repositories {
     mavenCentral()
+}
+
+val openApiOutputDir = layout.buildDirectory.dir("generated/openapi")
+
+val openApiTypeMappings = mapOf(
+    "CoordinatesAddRequest" to "ru.chousik.is.dto.request.CoordinatesAddRequest",
+    "CoordinatesUpdateRequest" to "ru.chousik.is.dto.request.CoordinatesUpdateRequest",
+    "CoordinatesResponse" to "ru.chousik.is.dto.response.CoordinatesResponse",
+    "LocationAddRequest" to "ru.chousik.is.dto.request.LocationAddRequest",
+    "LocationUpdateRequest" to "ru.chousik.is.dto.request.LocationUpdateRequest",
+    "LocationResponse" to "ru.chousik.is.dto.response.LocationResponse",
+    "PersonAddRequest" to "ru.chousik.is.dto.request.PersonAddRequest",
+    "PersonUpdateRequest" to "ru.chousik.is.dto.request.PersonUpdateRequest",
+    "PersonResponse" to "ru.chousik.is.dto.response.PersonResponse",
+    "StudyGroupAddRequest" to "ru.chousik.is.dto.request.StudyGroupAddRequest",
+    "StudyGroupUpdateRequest" to "ru.chousik.is.dto.request.StudyGroupUpdateRequest",
+    "StudyGroupResponse" to "ru.chousik.is.dto.response.StudyGroupResponse",
+    "StudyGroupShouldBeExpelledGroupResponse" to "ru.chousik.is.dto.response.StudyGroupShouldBeExpelledGroupResponse",
+    "StudyGroupExpelledTotalResponse" to "ru.chousik.is.dto.response.StudyGroupExpelledTotalResponse",
+    "PagedCoordinatesResponse" to "org.springframework.data.web.PagedModel",
+    "PagedLocationResponse" to "org.springframework.data.web.PagedModel",
+    "PagedPersonResponse" to "org.springframework.data.web.PagedModel",
+    "PagedStudyGroupResponse" to "org.springframework.data.web.PagedModel",
+    "PageModel" to "org.springframework.data.web.PagedModel",
+    "Color" to "ru.chousik.is.entity.Color",
+    "Country" to "ru.chousik.is.entity.Country",
+    "FormOfEducation" to "ru.chousik.is.entity.FormOfEducation",
+    "Semester" to "ru.chousik.is.entity.Semester"
+)
+
+val openApiAdditionalProperties = mapOf(
+    "useTags" to "true",
+    "interfaceOnly" to "true",
+    "skipDefaultInterface" to "true",
+    "useSpringBoot3" to "true"
+)
+
+val generateOpenApi by tasks.registering(Exec::class) {
+    group = "openapi"
+    description = "Generates Spring interfaces from the OpenAPI contract"
+
+    val outputDir = openApiOutputDir.get().asFile
+
+    inputs.file(file("src/main/resources/openapi.yaml"))
+    outputs.dir(outputDir)
+
+    doFirst {
+        project.delete(outputDir)
+    }
+
+    val typeMappingsArg = openApiTypeMappings.entries.joinToString(separator = ",") { (schema, fqcn) ->
+        "$schema=$fqcn"
+    }
+    val importMappingsArg = typeMappingsArg
+    val additionalPropsArg = openApiAdditionalProperties.entries.joinToString(separator = ",") { (key, value) ->
+        "$key=$value"
+    }
+
+    commandLine(
+        "openapi-generator",
+        "generate",
+        "-i", "${projectDir}/src/main/resources/openapi.yaml",
+        "-g", "spring",
+        "-o", outputDir.absolutePath,
+        "--global-property=apis,apiTests=false,apiDocs=false",
+        "--api-package=ru.chousik.is.api",
+        "--type-mappings=$typeMappingsArg",
+        "--import-mappings=$importMappingsArg",
+        "--additional-properties=$additionalPropsArg"
+    )
+
+    doLast {
+        val studyGroupsApi = outputDir.resolve("src/main/java/ru/chousik/is/api/StudyGroupsApi.java")
+        if (studyGroupsApi.exists()) {
+            val importLine = "import ru.chousik.is.entity.Semester;\n"
+            val marker = "package ru.chousik.is.api;\n\n"
+            val content = studyGroupsApi.readText()
+            if (!content.contains(importLine)) {
+                studyGroupsApi.writeText(content.replaceFirst(marker, marker + importLine))
+            }
+        }
+    }
+}
+
+extensions.getByType<SourceSetContainer>().named("main") {
+    java.srcDir(openApiOutputDir.get().dir("src/main/java").asFile)
+}
+
+val cleanOpenApi by tasks.registering(Delete::class) {
+    delete(openApiOutputDir)
+}
+
+tasks.named("build") {
+    dependsOn(generateOpenApi)
+    finalizedBy(cleanOpenApi)
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    dependsOn(generateOpenApi)
 }
 configurations.all {
     exclude(group = "org.glassfish.jaxb", module = "jaxb-core")
