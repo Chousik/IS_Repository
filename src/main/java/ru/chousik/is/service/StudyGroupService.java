@@ -39,6 +39,7 @@ import ru.chousik.is.repository.StudyGroupRepository.ShouldBeExpelledGroupProjec
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -322,7 +323,7 @@ public class StudyGroupService {
         String message = Optional.ofNullable(ex.getMostSpecificCause())
                 .map(Throwable::getMessage)
                 .orElse("");
-        if (message.contains("uq_coordinates_xy") || message.contains("uq_study_group_coordinates")) {
+        if (message.contains("uq_coordinates_xy")) {
             return new BadRequestException("Координаты с такими значениями уже используются", ex);
         }
         if (message.contains("uq_study_group_admin")) {
@@ -628,7 +629,20 @@ public class StudyGroupService {
         }
 
         if (remaining > 0) {
-            return false;
+            if (candidates.isEmpty()) {
+                return false;
+            }
+            StudyGroup overflowTarget = candidates.get(0);
+            overflowTarget.setStudentsCount(overflowTarget.getStudentsCount() + remaining);
+            if (!changedGroups.contains(overflowTarget)) {
+                changedGroups.add(overflowTarget);
+            }
+            remaining = 0;
+        }
+
+        List<StudyGroup> spawnedGroups = new ArrayList<>();
+        for (StudyGroup changed : changedGroups) {
+            spawnedGroups.addAll(splitOverloadedGroupIfNeeded(changed));
         }
 
         studyGroupRepository.saveAll(changedGroups);
@@ -637,6 +651,16 @@ public class StudyGroupService {
                 .map(studyGroupMapper::toStudyGroupResponse)
                 .forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "UPDATED", response));
 
+        if (!spawnedGroups.isEmpty()) {
+            List<StudyGroupResponse> createdResponses = new ArrayList<>();
+            for (StudyGroup splitGroup : spawnedGroups) {
+                assignGeneratedName(splitGroup, true);
+                StudyGroup persisted = studyGroupRepository.saveAndFlush(splitGroup);
+                createdResponses.add(studyGroupMapper.toStudyGroupResponse(persisted));
+            }
+            createdResponses.forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "CREATED", response));
+        }
+
         Long coordinateId = studyGroup.getCoordinates() != null ? studyGroup.getCoordinates().getId() : null;
         studyGroupRepository.delete(studyGroup);
         studyGroupRepository.flush();
@@ -644,6 +668,79 @@ public class StudyGroupService {
             coordinatesRepository.deleteById(coordinateId);
         }
         return true;
+    }
+
+    private List<StudyGroup> splitOverloadedGroupIfNeeded(StudyGroup group) {
+        Long max = MAX_STUDENTS.get(group.getFormOfEducation());
+        Long min = MIN_STUDENTS.get(group.getFormOfEducation());
+        Long total = group.getStudentsCount();
+        if (max == null || total == null || total <= max) {
+            return List.of();
+        }
+
+        long resolvedMin = min == null ? 1 : min;
+        List<Long> partitions = partitionStudents(total, resolvedMin, max);
+        Iterator<Long> iterator = partitions.iterator();
+        group.setStudentsCount(iterator.next());
+
+        List<StudyGroup> splitGroups = new ArrayList<>();
+        int offset = 1;
+        while (iterator.hasNext()) {
+            splitGroups.add(cloneGroupForSplit(group, iterator.next(), offset++));
+        }
+        return splitGroups;
+    }
+
+    private StudyGroup cloneGroupForSplit(StudyGroup template, long studentsCount, int offset) {
+        Coordinates coordinates = cloneCoordinates(template.getCoordinates(), offset);
+        StudyGroup clone = StudyGroup.builder()
+                .name("")
+                .coordinates(coordinates)
+                .studentsCount(studentsCount)
+                .expelledStudents(template.getExpelledStudents())
+                .course(template.getCourse())
+                .transferredStudents(template.getTransferredStudents())
+                .formOfEducation(template.getFormOfEducation())
+                .shouldBeExpelled(template.getShouldBeExpelled())
+                .averageMark(template.getAverageMark())
+                .semesterEnum(template.getSemesterEnum())
+                .groupAdmin(null)
+                .build();
+        return clone;
+    }
+
+    private List<Long> partitionStudents(long total, long min, long max) {
+        List<Long> parts = new ArrayList<>();
+        long remaining = total;
+        while (remaining > 0) {
+            long groupsLeft = (long) Math.ceil((double) remaining / (double) max);
+            long minReserve = min * (Math.max(0, groupsLeft - 1));
+            long candidate = Math.min(max, remaining - minReserve);
+            if (candidate < min && remaining > 0) {
+                candidate = Math.min(remaining, min);
+            }
+            if (candidate <= 0) {
+                candidate = remaining;
+            }
+            parts.add(candidate);
+            remaining -= candidate;
+        }
+        return parts;
+    }
+
+    private Coordinates cloneCoordinates(Coordinates source, int offset) {
+        if (source == null) {
+            throw new BadRequestException("Невозможно клонировать координаты для разделения группы: запись отсутствует");
+        }
+        long candidateX = source.getX() + offset;
+        Float baseY = source.getY();
+        while (coordinatesRepository.findByXAndY(candidateX, baseY).isPresent()) {
+            candidateX++;
+        }
+        return Coordinates.builder()
+                .x(candidateX)
+                .y(baseY)
+                .build();
     }
 
     private long availableCapacity(StudyGroup studyGroup) {

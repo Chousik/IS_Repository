@@ -19,6 +19,7 @@ import { formatDateTime } from '../utils/strings';
 import { mapPageModel, PagedResult } from '../utils/pagination';
 import { subscribeToEntityChanges, EntityChange } from '../services/events';
 import { useToast } from '../components/ToastProvider';
+import { resolveApiErrorMessage } from '../utils/apiErrors';
 
 const PAGE_SIZE = 10;
 
@@ -99,7 +100,7 @@ const StudyGroupsPage = () => {
       setPagedData(mapped);
       setTableError(null);
     } catch (error: any) {
-      const message = error?.message ?? 'Не удалось загрузить данные';
+      const message = await resolveApiErrorMessage(error, 'Не удалось загрузить данные');
       setTableError(message);
       showToast(message, 'error');
     } finally {
@@ -178,8 +179,9 @@ const StudyGroupsPage = () => {
       }
       await fetchPage();
     } catch (error: any) {
-      showToast(error?.message ?? 'Не удалось сохранить учебную группу', 'error');
-      throw error;
+      const message = await resolveApiErrorMessage(error, 'Не удалось сохранить учебную группу');
+      showToast(message, 'error');
+      return;
     }
   };
 
@@ -193,7 +195,8 @@ const StudyGroupsPage = () => {
       await fetchPage();
       showToast(`Группа "${confirmDelete.name}" удалена`, 'success');
     } catch (error: any) {
-      showToast(error?.message ?? 'Не удалось удалить учебную группу', 'error');
+      const message = await resolveApiErrorMessage(error, 'Не удалось удалить учебную группу');
+      showToast(message, 'error');
     } finally {
       setConfirmDelete(null);
     }

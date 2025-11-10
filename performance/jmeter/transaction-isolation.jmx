@@ -20,7 +20,7 @@
           </elementProp>
           <elementProp name="port" elementType="Argument">
             <stringProp name="Argument.name">port</stringProp>
-            <stringProp name="Argument.value">8080</stringProp>
+            <stringProp name="Argument.value">8041</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="importFile" elementType="Argument">
@@ -101,7 +101,7 @@ props.put("seedY", String.format(Locale.US, "%.2f", rnd.nextDouble(10d, 80d)))
                 <stringProp name="Argument.value">{
   "coordinates": {
     "x": ${__Random(10000,99999,updX)},
-    "y": ${__groovy(String.format(java.util.Locale.US, "%.2f", 15 + Math.random() * 20),updY,)}
+    "y": ${updateBaseY}
   },
   "studentsCount": 22,
   "expelledStudents": 2,
@@ -134,6 +134,17 @@ props.put("seedY", String.format(Locale.US, "%.2f", rnd.nextDouble(10d, 80d)))
           <stringProp name="HTTPSampler.method">POST</stringProp>
         </HTTPSamplerProxy>
         <hashTree>
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Seed base group Y" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">double value = 15d + Math.random() * 20d;
+String formatted = String.format(java.util.Locale.US, "%.2f", value);
+vars.put("updateBaseY", formatted);
+</stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
           <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract base group id" enabled="true">
             <boolProp name="JSONPostProcessor.compute_concat">false</boolProp>
             <stringProp name="JSONPostProcessor.referenceNames">targetGroupId</stringProp>
@@ -175,7 +186,7 @@ props.put("baseAdminId", vars.get("baseAdminId"))
                 <stringProp name="Argument.value">{
   "coordinates": {
     "x": ${__Random(20000,30000,delX)},
-    "y": ${__groovy(String.format(java.util.Locale.US, "%.2f", 10 + Math.random() * 10),delY,)}
+    "y": ${deleteCandidateY}
   },
   "studentsCount": 18,
   "expelledStudents": 1,
@@ -193,6 +204,17 @@ props.put("baseAdminId", vars.get("baseAdminId"))
           <stringProp name="HTTPSampler.method">POST</stringProp>
         </HTTPSamplerProxy>
         <hashTree>
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Seed delete candidate Y" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">double value = 10d + Math.random() * 10d;
+String formatted = String.format(java.util.Locale.US, "%.2f", value);
+vars.put("deleteCandidateY", formatted);
+</stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
           <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract delete group id" enabled="true">
             <boolProp name="JSONPostProcessor.compute_concat">false</boolProp>
             <stringProp name="JSONPostProcessor.referenceNames">deleteGroupId</stringProp>
@@ -224,7 +246,7 @@ props.put("deleteGroupId", vars.get("deleteGroupId"))
                 <stringProp name="Argument.value">{
   "coordinates": {
     "x": ${__Random(40000,50000,aX)},
-    "y": ${__groovy(String.format(java.util.Locale.US, "%.2f", 20 + Math.random() * 10),aY,)}
+    "y": ${sharedGroupAY}
   },
   "studentsCount": 16,
   "expelledStudents": 1,
@@ -242,6 +264,17 @@ props.put("deleteGroupId", vars.get("deleteGroupId"))
           <stringProp name="HTTPSampler.method">POST</stringProp>
         </HTTPSamplerProxy>
         <hashTree>
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Seed shared group A Y" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">double value = 20d + Math.random() * 10d;
+String formatted = String.format(java.util.Locale.US, "%.2f", value);
+vars.put("sharedGroupAY", formatted);
+</stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
           <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract group A id" enabled="true">
             <boolProp name="JSONPostProcessor.compute_concat">false</boolProp>
             <stringProp name="JSONPostProcessor.referenceNames">groupAId</stringProp>
@@ -273,7 +306,7 @@ props.put("sharedGroupAId", vars.get("groupAId"))
                 <stringProp name="Argument.value">{
   "coordinates": {
     "x": ${__Random(51000,60000,bX)},
-    "y": ${__groovy(String.format(java.util.Locale.US, "%.2f", 30 + Math.random() * 10),bY,)}
+    "y": ${sharedGroupBY}
   },
   "studentsCount": 20,
   "expelledStudents": 2,
@@ -291,6 +324,17 @@ props.put("sharedGroupAId", vars.get("groupAId"))
           <stringProp name="HTTPSampler.method">POST</stringProp>
         </HTTPSamplerProxy>
         <hashTree>
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Seed shared group B Y" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">double value = 30d + Math.random() * 10d;
+String formatted = String.format(java.util.Locale.US, "%.2f", value);
+vars.put("sharedGroupBY", formatted);
+</stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
           <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract group B id" enabled="true">
             <boolProp name="JSONPostProcessor.compute_concat">false</boolProp>
             <stringProp name="JSONPostProcessor.referenceNames">groupBId</stringProp>
@@ -481,15 +525,26 @@ vars.put("nextStudentsCount", String.valueOf(next))
           <stringProp name="HTTPSampler.method">PATCH</stringProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <JSONAssertion guiclass="JSONAssertionGui" testclass="JSONAssertion" testname="Students count updated" enabled="true">
-            <boolProp name="JSON_ASSERTION.invert">false</boolProp>
-            <boolProp name="JSON_ASSERTION.isRegex">false</boolProp>
-            <boolProp name="JSON_ASSERTION.jsonValidation">false</boolProp>
-            <boolProp name="JSON_ASSERTION.expectNull">false</boolProp>
-            <boolProp name="JSON_ASSERTION.or">false</boolProp>
-            <stringProp name="JSON_ASSERTION.path">$.studentsCount</stringProp>
-            <stringProp name="JSON_ASSERTION.expectedValue">${nextStudentsCount}</stringProp>
-          </JSONAssertion>
+          <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Students count updated" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">import groovy.json.JsonSlurper
+
+def body = prev.getResponseDataAsString()
+if (!body) {
+    throw new AssertionError('Сервер вернул пустой ответ')
+}
+def json = new JsonSlurper().parseText(body)
+if (json.studentsCount == null) {
+    throw new AssertionError('В ответе отсутствует поле studentsCount')
+}
+if (json.studentsCount as long != (vars.get('nextStudentsCount') as long)) {
+    throw new AssertionError('Ожидали studentsCount=' + vars.get('nextStudentsCount') + ', получили ' + json.studentsCount)
+}
+</stringProp>
+          </JSR223Assertion>
           <hashTree/>
         </hashTree>
       </hashTree>
@@ -710,7 +765,7 @@ vars.put("exclusiveAdminId", id)
                 <stringProp name="Argument.value">{
   "coordinates": {
     "x": ${__Random(60000,90000,dupX)},
-    "y": ${__groovy(String.format(java.util.Locale.US, "%.2f", 40 + Math.random() * 20),dupY,)}
+    "y": ${duplicateGroupY}
   },
   "studentsCount": 24,
   "expelledStudents": 2,
@@ -730,6 +785,17 @@ vars.put("exclusiveAdminId", id)
           <stringProp name="HTTPSampler.method">POST</stringProp>
         </HTTPSamplerProxy>
         <hashTree>
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Seed duplicate group Y" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">double value = 40d + Math.random() * 20d;
+String formatted = String.format(java.util.Locale.US, "%.2f", value);
+vars.put("duplicateGroupY", formatted);
+</stringProp>
+          </JSR223PreProcessor>
+          <hashTree/>
           <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Duplicate admin assertion" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"/>
@@ -755,8 +821,9 @@ throw new AssertionError("Ожидались 200 или 400, получено " 
             <stringProp name="parameters"/>
             <stringProp name="filename"/>
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="script">if ((prev.getResponseCode() as int) == 200) {
-    import groovy.json.JsonSlurper
+            <stringProp name="script">import groovy.json.JsonSlurper
+
+if ((prev.getResponseCode() as int) == 200) {
     def payload = new JsonSlurper().parseText(prev.getResponseDataAsString())
     def id = payload.id
     if (id) {
@@ -840,7 +907,7 @@ import java.net.URL
 
 def protocol = props.get("protocol") ?: "http"
 def host = props.get("host") ?: "localhost"
-def port = props.get("port") ?: "8080"
+def port = props.get("port") ?: "8041"
 
 def sendDelete = { String path ->
     if (!path) {

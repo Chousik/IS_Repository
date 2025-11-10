@@ -30,7 +30,7 @@ public class StudyGroup {
     private String name; // генерируется автоматически, уникальное
 
     @NotNull
-    @OneToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, optional = false)
+    @ManyToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, optional = false)
     @JoinColumn(name = "coordinates_id", nullable = false)
     private Coordinates coordinates; // отдельная сущность
 
