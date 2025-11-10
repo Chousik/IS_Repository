@@ -1,0 +1,22 @@
+# Пример без администраторов: показаны группы только с обязательными полями и корректными размерами.
+groups:
+  - course: 3
+    formOfEducation: DISTANCE_EDUCATION
+    semesterEnum: FOURTH
+    studentsCount: 25   # дистанционная форма 20..100
+    expelledStudents: 2
+    transferredStudents: 1
+    shouldBeExpelled: 1
+    coordinates:
+      x: 50
+      y: -45.9
+  - course: 6
+    formOfEducation: EVENING_CLASSES
+    semesterEnum: FIFTH
+    studentsCount: 22   # вечерняя форма 6..25
+    expelledStudents: 2
+    transferredStudents: 3
+    shouldBeExpelled: 2
+    coordinates:
+      x: 98
+      y: 2.0
