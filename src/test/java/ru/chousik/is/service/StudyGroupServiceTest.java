@@ -191,11 +191,11 @@ class StudyGroupServiceTest {
     @Test
     void create_throwsWhenBothCoordinateSourcesProvided() {
         StudyGroupAddRequest request = new StudyGroupAddRequest(
-                "Test",
                 11L,
                 new CoordinatesAddRequest(1L, 2.0f),
                 10L,
                 5L,
+                3,
                 4L,
                 FormOfEducation.FULL_TIME_EDUCATION,
                 3L,
@@ -212,11 +212,11 @@ class StudyGroupServiceTest {
     @Test
     void create_throwsWhenCoordinatesMissing() {
         StudyGroupAddRequest request = new StudyGroupAddRequest(
-                "Test",
                 null,
                 null,
                 10L,
                 5L,
+                3,
                 4L,
                 FormOfEducation.FULL_TIME_EDUCATION,
                 3L,
@@ -238,12 +238,14 @@ class StudyGroupServiceTest {
                 .coordinates(coordinates)
                 .studentsCount(10L)
                 .expelledStudents(2L)
+                .course(3)
                 .transferredStudents(1L)
                 .formOfEducation(FormOfEducation.FULL_TIME_EDUCATION)
                 .shouldBeExpelled(3L)
                 .averageMark(5)
                 .semesterEnum(semester)
                 .groupAdmin(null)
+                .sequenceNumber(1)
                 .build();
         group.setCreationDate(LocalDateTime.now());
         return group;
@@ -263,6 +265,7 @@ class StudyGroupServiceTest {
                 group.getCreationDate(),
                 group.getStudentsCount(),
                 group.getExpelledStudents(),
+                group.getCourse(),
                 group.getTransferredStudents(),
                 group.getFormOfEducation(),
                 group.getShouldBeExpelled(),

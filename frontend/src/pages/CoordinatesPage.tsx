@@ -11,6 +11,7 @@ import { subscribeToEntityChanges, EntityChange } from '../services/events';
 import { loadAllCoordinates, loadAllStudyGroups } from '../services/entityLoaders';
 import Modal from '../components/Modal';
 import { useToast } from '../components/ToastProvider';
+import { resolveApiErrorMessage } from '../utils/apiErrors';
 
 const PAGE_SIZE = 10;
 
@@ -174,8 +175,9 @@ const CoordinatesPage = () => {
       setCreateErrors({});
       await fetchPage();
       showToast('Координаты созданы', 'success');
-    } catch (err: any) {
-      showToast(err?.message ?? 'Не удалось создать координаты', 'error');
+    } catch (err) {
+      const message = await resolveApiErrorMessage(err, 'Не удалось создать координаты');
+      showToast(message, 'error');
     }
   };
 
@@ -197,8 +199,9 @@ const CoordinatesPage = () => {
       setEditErrors({});
       await fetchPage();
       showToast('Координаты обновлены', 'success');
-    } catch (err: any) {
-      showToast(err?.message ?? 'Не удалось обновить координаты', 'error');
+    } catch (err) {
+      const message = await resolveApiErrorMessage(err, 'Не удалось обновить координаты');
+      showToast(message, 'error');
     }
   };
 

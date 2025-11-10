@@ -1,31 +1,33 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Modal from '../../components/Modal';
 import { useToast } from '../ToastProvider';
-import type {
+import {
   Color,
-  CoordinatesResponse,
   Country,
   FormOfEducation,
+  Semester,
+} from '../../api/models';
+import type {
+  CoordinatesResponse,
   LocationResponse,
   PersonResponse,
-  Semester,
   StudyGroupAddRequest,
   StudyGroupResponse,
   StudyGroupUpdateRequest,
 } from '../../api/models';
 
-const colorValues: Color[] = ['BLACK', 'YELLOW', 'ORANGE'];
-const countryValues: Country[] = ['UNITED_KINGDOM', 'FRANCE', 'INDIA', 'VATICAN'];
-const educationValues: FormOfEducation[] = ['DISTANCE_EDUCATION', 'FULL_TIME_EDUCATION', 'EVENING_CLASSES'];
-const semesterValues: Semester[] = ['FIRST', 'SECOND', 'FOURTH', 'SIXTH', 'SEVENTH'];
+const colorValues: Color[] = Object.values(Color);
+const countryValues: Country[] = Object.values(Country);
+const educationValues: FormOfEducation[] = Object.values(FormOfEducation);
+const semesterValues: Semester[] = Object.values(Semester);
 
 type CoordinatesMode = 'existing' | 'new';
 type AdminMode = 'none' | 'existing' | 'new';
 type LocationMode = 'none' | 'existing' | 'new';
 
 type GroupFormState = {
-  name: string;
-  studentsCount?: number;
+  course: number;
+  studentsCount: number;
   expelledStudents: number;
   transferredStudents: number;
   formOfEducation?: FormOfEducation;
@@ -48,17 +50,16 @@ type GroupFormState = {
     locationId?: number;
     location?: { name: string; x: number; y: number; z: number };
   };
-  clearStudentsCount?: boolean;
   clearAverageMark?: boolean;
-  clearFormOfEducation?: boolean;
 };
 
 type GroupFormErrors = {
-  name?: string;
   semesterEnum?: string;
   studentsCount?: string;
   expelledStudents?: string;
   transferredStudents?: string;
+  course?: string;
+  formOfEducation?: string;
   shouldBeExpelled?: string;
   averageMark?: string;
   coordinatesId?: string;
@@ -77,7 +78,7 @@ type GroupFormErrors = {
 };
 
 interface StudyGroupFormModalProps {
-  open: boolean;
+  isOpen: boolean;
   mode: 'create' | 'edit';
   initialValues?: StudyGroupResponse;
   coordinates: CoordinatesResponse[];
@@ -90,7 +91,8 @@ interface StudyGroupFormModalProps {
 function buildInitialState(initial?: StudyGroupResponse): GroupFormState {
   if (!initial) {
     return {
-      name: '',
+      course: 1,
+      studentsCount: 10,
       expelledStudents: 1,
       transferredStudents: 1,
       shouldBeExpelled: 1,
@@ -107,8 +109,8 @@ function buildInitialState(initial?: StudyGroupResponse): GroupFormState {
     };
   }
   return {
-    name: initial.name,
-    studentsCount: initial.studentsCount ?? undefined,
+    course: initial.course,
+    studentsCount: initial.studentsCount ?? 1,
     expelledStudents: initial.expelledStudents,
     transferredStudents: initial.transferredStudents,
     formOfEducation: initial.formOfEducation ?? undefined,
@@ -151,11 +153,11 @@ function buildInitialState(initial?: StudyGroupResponse): GroupFormState {
 
 function buildAddPayload(state: GroupFormState): StudyGroupAddRequest {
   return {
-    name: state.name,
     studentsCount: state.studentsCount,
     expelledStudents: state.expelledStudents,
+    course: state.course,
     transferredStudents: state.transferredStudents,
-    formOfEducation: state.formOfEducation,
+    formOfEducation: state.formOfEducation!,
     shouldBeExpelled: state.shouldBeExpelled,
     averageMark: state.averageMark,
     semesterEnum: state.semesterEnum as Semester,
@@ -194,13 +196,11 @@ function buildAddPayload(state: GroupFormState): StudyGroupAddRequest {
 
 function buildUpdatePayload(state: GroupFormState): StudyGroupUpdateRequest {
   return {
-    name: state.name,
     studentsCount: state.studentsCount,
-    clearStudentsCount: state.clearStudentsCount,
     expelledStudents: state.expelledStudents,
+    course: state.course,
     transferredStudents: state.transferredStudents,
-    formOfEducation: state.formOfEducation,
-    clearFormOfEducation: state.clearFormOfEducation,
+    formOfEducation: state.formOfEducation!,
     shouldBeExpelled: state.shouldBeExpelled,
     averageMark: state.averageMark,
     clearAverageMark: state.clearAverageMark,
@@ -240,7 +240,7 @@ function buildUpdatePayload(state: GroupFormState): StudyGroupUpdateRequest {
 }
 
 const StudyGroupFormModal = ({
-  open,
+  isOpen,
   mode,
   initialValues,
   coordinates,
@@ -255,11 +255,11 @@ const StudyGroupFormModal = ({
   const [errors, setErrors] = useState<GroupFormErrors>({});
 
   useEffect(() => {
-    if (open) {
+    if (isOpen) {
       setState(buildInitialState(initialValues));
       setErrors({});
     }
-  }, [open, initialValues]);
+  }, [isOpen, initialValues]);
 
   const coordinatesOptions = useMemo(
     () => coordinates.map((coord) => ({ value: coord.id, label: `#${coord.id} (${coord.x}; ${coord.y})` })),
@@ -286,27 +286,25 @@ const StudyGroupFormModal = ({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const trimmedName = state.name.trim();
     const validationErrors: GroupFormErrors = {};
 
-    if (!trimmedName) {
-      validationErrors.name = 'Введите название учебной группы';
-    }
     if (!state.semesterEnum) {
       validationErrors.semesterEnum = 'Выберите семестр';
     }
-    if (state.studentsCount != null) {
-      if (Number.isNaN(state.studentsCount)) {
-        validationErrors.studentsCount = 'Укажите количество студентов';
-      } else if (state.studentsCount <= 0) {
-        validationErrors.studentsCount = 'Количество студентов должно быть больше 0';
-      }
+    if (Number.isNaN(state.studentsCount) || state.studentsCount <= 0) {
+      validationErrors.studentsCount = 'Количество студентов должно быть больше 0';
+    }
+    if (Number.isNaN(state.course) || state.course <= 0) {
+      validationErrors.course = 'Курс должен быть больше 0';
     }
     if (!state.expelledStudents || state.expelledStudents <= 0) {
       validationErrors.expelledStudents = 'Количество отчисленных студентов должно быть больше 0';
     }
     if (!state.transferredStudents || state.transferredStudents <= 0) {
       validationErrors.transferredStudents = 'Количество переведённых студентов должно быть больше 0';
+    }
+    if (!state.formOfEducation) {
+      validationErrors.formOfEducation = 'Выберите форму обучения';
     }
     if (!state.shouldBeExpelled || state.shouldBeExpelled <= 0) {
       validationErrors.shouldBeExpelled = 'Кол-во к отчислению должно быть больше 0';
@@ -378,7 +376,6 @@ const StudyGroupFormModal = ({
 
     const preparedState: GroupFormState = {
       ...state,
-      name: trimmedName,
     };
 
     if (state.adminMode === 'new' && state.admin) {
@@ -414,7 +411,7 @@ const StudyGroupFormModal = ({
 
   return (
     <Modal
-      open={open}
+      open={isOpen}
       title={mode === 'create' ? 'Создание учебной группы' : 'Редактирование учебной группы'}
       onClose={() => {
         if (!submitting) onCancel();
@@ -422,48 +419,36 @@ const StudyGroupFormModal = ({
       footer={null}
     >
       <form onSubmit={handleSubmit} className="form-grid" noValidate>
-        <div className="form-field full-width">
-          <label htmlFor="group-name">Название</label>
-          <input
-            id="group-name"
-            className="input"
-            value={state.name}
-            onChange={(event) => {
-              onChange('name', event.target.value);
-              clearError('name');
-            }}
-          />
-          {errors.name && <div className="field-error">{errors.name}</div>}
-        </div>
-
         <div className="form-field">
           <label>Количество студентов</label>
           <input
             className="number-input"
             type="number"
             min={1}
-            value={state.studentsCount ?? ''}
+            value={state.studentsCount}
             onChange={(event) => {
-              onChange('studentsCount', event.target.value ? Number(event.target.value) : undefined);
+              const value = event.target.value;
+              onChange('studentsCount', value ? Number(value) : 0);
               clearError('studentsCount');
             }}
           />
           {errors.studentsCount && <div className="field-error">{errors.studentsCount}</div>}
-          {mode === 'edit' && (
-            <label className="form-inline">
-              <input
-                type="checkbox"
-                checked={state.clearStudentsCount ?? false}
-                onChange={(event) => {
-                  onChange('clearStudentsCount', event.target.checked);
-                  if (event.target.checked) {
-                    clearError('studentsCount');
-                  }
-                }}
-              />
-              очистить значение
-            </label>
-          )}
+        </div>
+
+        <div className="form-field">
+          <label>Курс</label>
+          <input
+            className="number-input"
+            type="number"
+            min={1}
+            value={state.course}
+            onChange={(event) => {
+              const value = event.target.value;
+              onChange('course', value ? Number(value) : 1);
+              clearError('course');
+            }}
+          />
+          {errors.course && <div className="field-error">{errors.course}</div>}
         </div>
 
         <div className="form-field">
@@ -501,9 +486,10 @@ const StudyGroupFormModal = ({
           <select
             className="select"
             value={state.formOfEducation ?? ''}
-            onChange={(event) =>
-              onChange('formOfEducation', (event.target.value || undefined) as FormOfEducation | undefined)
-            }
+            onChange={(event) => {
+              onChange('formOfEducation', (event.target.value || undefined) as FormOfEducation | undefined);
+              clearError('formOfEducation');
+            }}
           >
             <option value="">—</option>
             {educationValues.map((value) => (
@@ -512,16 +498,7 @@ const StudyGroupFormModal = ({
               </option>
             ))}
           </select>
-          {mode === 'edit' && (
-            <label className="form-inline">
-              <input
-                type="checkbox"
-                checked={state.clearFormOfEducation ?? false}
-                onChange={(event) => onChange('clearFormOfEducation', event.target.checked)}
-              />
-              очистить
-            </label>
-          )}
+          {errors.formOfEducation && <div className="field-error">{errors.formOfEducation}</div>}
         </div>
 
         <div className="form-field">

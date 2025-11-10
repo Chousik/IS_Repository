@@ -3,16 +3,19 @@ spring:
     name: IS-project
   datasource:
     driver-class-name: org.postgresql.Driver
-    username: ${DB_USER}
-    password: ${DB_PASS}
-    url: jdbc:postgresql://pg:5432/studs
+    username: postgres
+    password: postgres
+    url: jdbc:postgresql://localhost:5432/is_app
   jpa:
     open-in-view: false
     properties:
       eclipselink.weaving: false
-      eclipselink.ddl-generation: drop-and-create-tables
-      eclipselink.ddl-generation.output-mode: database
       eclipselink.default-schema: public
       eclipselink.logging.level: FINE
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:db/migration
 server:
   port: 8041

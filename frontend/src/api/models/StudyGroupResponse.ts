@@ -77,13 +77,19 @@ export interface StudyGroupResponse {
      * @type {number}
      * @memberof StudyGroupResponse
      */
-    studentsCount?: number;
+    studentsCount: number;
     /**
      * 
      * @type {number}
      * @memberof StudyGroupResponse
      */
     expelledStudents: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof StudyGroupResponse
+     */
+    course: number;
     /**
      * 
      * @type {number}
@@ -132,7 +138,9 @@ export function instanceOfStudyGroupResponse(value: object): value is StudyGroup
     if (!('name' in value) || value['name'] === undefined) return false;
     if (!('coordinates' in value) || value['coordinates'] === undefined) return false;
     if (!('creationDate' in value) || value['creationDate'] === undefined) return false;
+    if (!('studentsCount' in value) || value['studentsCount'] === undefined) return false;
     if (!('expelledStudents' in value) || value['expelledStudents'] === undefined) return false;
+    if (!('course' in value) || value['course'] === undefined) return false;
     if (!('transferredStudents' in value) || value['transferredStudents'] === undefined) return false;
     if (!('shouldBeExpelled' in value) || value['shouldBeExpelled'] === undefined) return false;
     if (!('semesterEnum' in value) || value['semesterEnum'] === undefined) return false;
@@ -153,8 +161,9 @@ export function StudyGroupResponseFromJSONTyped(json: any, ignoreDiscriminator: 
         'name': json['name'],
         'coordinates': CoordinatesResponseFromJSON(json['coordinates']),
         'creationDate': (new Date(json['creationDate'])),
-        'studentsCount': json['studentsCount'] == null ? undefined : json['studentsCount'],
+        'studentsCount': json['studentsCount'],
         'expelledStudents': json['expelledStudents'],
+        'course': json['course'],
         'transferredStudents': json['transferredStudents'],
         'formOfEducation': json['formOfEducation'] == null ? undefined : FormOfEducationFromJSON(json['formOfEducation']),
         'shouldBeExpelled': json['shouldBeExpelled'],
@@ -181,6 +190,7 @@ export function StudyGroupResponseToJSONTyped(value?: StudyGroupResponse | null,
         'creationDate': value['creationDate'].toISOString(),
         'studentsCount': value['studentsCount'],
         'expelledStudents': value['expelledStudents'],
+        'course': value['course'],
         'transferredStudents': value['transferredStudents'],
         'formOfEducation': FormOfEducationToJSON(value['formOfEducation']),
         'shouldBeExpelled': value['shouldBeExpelled'],
@@ -189,4 +199,3 @@ export function StudyGroupResponseToJSONTyped(value?: StudyGroupResponse | null,
         'groupAdmin': PersonResponseToJSON(value['groupAdmin']),
     };
 }
-

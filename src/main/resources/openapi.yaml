@@ -543,6 +543,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StudyGroupExpelledTotalResponse'
+  /api/v1/imports/study-groups:
+    get:
+      tags: [Imports]
+      summary: Получить историю импортов учебных групп
+      responses:
+        '200':
+          description: История импортных операций
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ImportJobResponse'
+    post:
+      tags: [Imports]
+      summary: Импортировать учебные группы из YAML-файла
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Результат импорта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportJobResponse'
 components:
   parameters:
     IdPathParam:
@@ -746,14 +781,14 @@ components:
     StudyGroupAddRequest:
       type: object
       required:
-        - name
+        - studentsCount
         - expelledStudents
+        - course
         - transferredStudents
+        - formOfEducation
         - shouldBeExpelled
         - semesterEnum
       properties:
-        name:
-          type: string
         coordinatesId:
           type: integer
           format: int64
@@ -765,6 +800,9 @@ components:
         expelledStudents:
           type: integer
           format: int64
+        course:
+          type: integer
+          format: int32
         transferredStudents:
           type: integer
           format: int64
@@ -786,8 +824,6 @@ components:
     StudyGroupUpdateRequest:
       type: object
       properties:
-        name:
-          type: string
         coordinatesId:
           type: integer
           format: int64
@@ -796,18 +832,17 @@ components:
         studentsCount:
           type: integer
           format: int64
-        clearStudentsCount:
-          type: boolean
         expelledStudents:
           type: integer
           format: int64
+        course:
+          type: integer
+          format: int32
         transferredStudents:
           type: integer
           format: int64
         formOfEducation:
           $ref: '#/components/schemas/FormOfEducation'
-        clearFormOfEducation:
-          type: boolean
         shouldBeExpelled:
           type: integer
           format: int64
@@ -832,8 +867,11 @@ components:
         - name
         - coordinates
         - creationDate
+        - studentsCount
         - expelledStudents
+        - course
         - transferredStudents
+        - formOfEducation
         - shouldBeExpelled
         - semesterEnum
       properties:
@@ -853,6 +891,9 @@ components:
         expelledStudents:
           type: integer
           format: int64
+        course:
+          type: integer
+          format: int32
         transferredStudents:
           type: integer
           format: int64
@@ -885,6 +926,39 @@ components:
         totalExpelledStudents:
           type: integer
           format: int64
+    ImportJobResponse:
+      type: object
+      required:
+        - id
+        - entityType
+        - status
+        - filename
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        entityType:
+          type: string
+        status:
+          type: string
+          enum: [IN_PROGRESS, COMPLETED, FAILED]
+        filename:
+          type: string
+        totalRecords:
+          type: integer
+          format: int32
+        successCount:
+          type: integer
+          format: int32
+        errorMessage:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
     PagedCoordinatesResponse:
       allOf:
         - $ref: '#/components/schemas/PageModel'

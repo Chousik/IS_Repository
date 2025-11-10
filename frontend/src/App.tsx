@@ -4,10 +4,11 @@ import LocationsPage from './pages/LocationsPage';
 import PersonsPage from './pages/PersonsPage';
 import StudyGroupsPage from './pages/StudyGroupsPage';
 import SpecialOperationsPage from './pages/SpecialOperationsPage';
+import ImportPage from './pages/ImportPage';
 import './App.css';
 import { ToastProvider } from './components/ToastProvider';
 
-type ViewKey = 'study-groups' | 'coordinates' | 'locations' | 'persons' | 'special';
+type ViewKey = 'study-groups' | 'coordinates' | 'locations' | 'persons' | 'special' | 'import';
 
 const NAV_ITEMS: { key: ViewKey; label: string }[] = [
   { key: 'study-groups', label: 'Учебные группы' },
@@ -15,6 +16,7 @@ const NAV_ITEMS: { key: ViewKey; label: string }[] = [
   { key: 'locations', label: 'Локации' },
   { key: 'persons', label: 'Люди' },
   { key: 'special', label: 'Спецоперации' },
+  { key: 'import', label: 'Импорт' },
 ];
 
 function App() {
@@ -45,6 +47,7 @@ function App() {
             {activeView === 'locations' && <LocationsPage />}
             {activeView === 'persons' && <PersonsPage />}
             {activeView === 'special' && <SpecialOperationsPage />}
+            {activeView === 'import' && <ImportPage />}
           </section>
         </main>
       </div>

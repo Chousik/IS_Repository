@@ -1,12 +1,14 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { personsApi, studyGroupsApi } from '../apiClient';
+import {
+  Color,
+  Country,
+} from '../api/models';
 import type {
   PersonAddRequest,
   PersonResponse,
   PersonUpdateRequest,
   LocationResponse,
-  Color,
-  Country,
   StudyGroupResponse,
 } from '../api/models';
 import { loadAllLocations, loadAllPersons, loadAllStudyGroups } from '../services/entityLoaders';
@@ -15,8 +17,8 @@ import Modal from '../components/Modal';
 import { useToast } from '../components/ToastProvider';
 
 const PAGE_SIZE = 10;
-const colorValues: Color[] = ['BLACK', 'YELLOW', 'ORANGE'];
-const countryValues: Country[] = ['UNITED_KINGDOM', 'FRANCE', 'INDIA', 'VATICAN'];
+const colorValues: Color[] = Object.values(Color);
+const countryValues: Country[] = Object.values(Country);
 type LocationMode = 'none' | 'existing' | 'new';
 
 type PersonFormErrors = {
