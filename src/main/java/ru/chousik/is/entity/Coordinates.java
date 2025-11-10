@@ -5,7 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 @Entity
-@Table(name = "coordinates")
+@Table(name = "coordinates",
+        uniqueConstraints = @UniqueConstraint(name = "uq_coordinates_xy", columnNames = {"x", "y"}))
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -17,6 +18,7 @@ public class Coordinates {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private long x;
 
     @NotNull

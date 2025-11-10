@@ -1,12 +1,14 @@
 package ru.chousik.is.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import ru.chousik.is.dto.mapper.CoordinatesMapper;
 import ru.chousik.is.dto.mapper.LocationMapper;
@@ -40,6 +42,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -94,7 +97,7 @@ public class StudyGroupService {
                 .toList();
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public StudyGroupResponse create(StudyGroupAddRequest request) {
         if (request == null) {
             throw new BadRequestException("Тело запроса отсутствует");
@@ -128,13 +131,18 @@ public class StudyGroupService {
 
         assignGeneratedName(studyGroup, true);
 
-        StudyGroup saved = studyGroupRepository.save(studyGroup);
+        StudyGroup saved;
+        try {
+            saved = studyGroupRepository.save(studyGroup);
+        } catch (DataIntegrityViolationException ex) {
+            throw translateConstraintViolation(ex);
+        }
         StudyGroupResponse response = studyGroupMapper.toStudyGroupResponse(saved);
         entityChangeNotifier.publish("STUDY_GROUP", "CREATED", response);
         return response;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public StudyGroupResponse update(Long id, StudyGroupUpdateRequest request) {
         validateUpdateRequest(request);
 
@@ -143,7 +151,12 @@ public class StudyGroupService {
 
         applyUpdates(studyGroup, request);
 
-        StudyGroup saved = studyGroupRepository.saveAndFlush(studyGroup);
+        StudyGroup saved;
+        try {
+            saved = studyGroupRepository.saveAndFlush(studyGroup);
+        } catch (DataIntegrityViolationException ex) {
+            throw translateConstraintViolation(ex);
+        }
         StudyGroupResponse response = studyGroupMapper.toStudyGroupResponse(saved);
         if (tryDissolveGroupIfNeeded(saved)) {
             entityChangeNotifier.publish("STUDY_GROUP", "DELETED", response);
@@ -153,7 +166,7 @@ public class StudyGroupService {
         return response;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public List<StudyGroupResponse> updateMany(List<Long> ids, StudyGroupUpdateRequest request) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
@@ -177,7 +190,12 @@ public class StudyGroupService {
             applyUpdates(studyGroup, request, resolvedCoordinates, resolvedAdmin);
         }
 
-        List<StudyGroup> saved = studyGroupRepository.saveAllAndFlush(studyGroups);
+        List<StudyGroup> saved;
+        try {
+            saved = studyGroupRepository.saveAllAndFlush(studyGroups);
+        } catch (DataIntegrityViolationException ex) {
+            throw translateConstraintViolation(ex);
+        }
         List<StudyGroupResponse> responses = new ArrayList<>();
         for (StudyGroup updated : saved) {
             StudyGroupResponse response = studyGroupMapper.toStudyGroupResponse(updated);
@@ -191,7 +209,7 @@ public class StudyGroupService {
         return responses;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public StudyGroupResponse delete(Long id) {
         StudyGroup studyGroup = studyGroupRepository.findById(id).orElse(null);
         if (studyGroup == null) {
@@ -209,7 +227,7 @@ public class StudyGroupService {
         return response;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public void deleteMany(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return;
@@ -237,7 +255,7 @@ public class StudyGroupService {
         responses.forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "DELETED", response));
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public long deleteAllBySemester(Semester semesterEnum) {
         if (semesterEnum == null) {
             throw new BadRequestException("Не указан semesterEnum");
@@ -268,7 +286,7 @@ public class StudyGroupService {
         return responses.size();
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public StudyGroupResponse deleteOneBySemester(Semester semesterEnum) {
         if (semesterEnum == null) {
             throw new BadRequestException("Не указан semesterEnum");
@@ -298,6 +316,19 @@ public class StudyGroupService {
     public StudyGroupExpelledTotalResponse totalExpelledStudents() {
         Long total = studyGroupRepository.sumExpelledStudents();
         return new StudyGroupExpelledTotalResponse(total == null ? 0 : total);
+    }
+
+    private RuntimeException translateConstraintViolation(DataIntegrityViolationException ex) {
+        String message = Optional.ofNullable(ex.getMostSpecificCause())
+                .map(Throwable::getMessage)
+                .orElse("");
+        if (message.contains("uq_coordinates_xy") || message.contains("uq_study_group_coordinates")) {
+            return new BadRequestException("Координаты с такими значениями уже используются", ex);
+        }
+        if (message.contains("uq_study_group_admin")) {
+            return new BadRequestException("Администратор уже закреплён за другой учебной группой", ex);
+        }
+        return new BadRequestException("Нарушено ограничение уникальности учебной группы", ex);
     }
 
     private void applyUpdates(StudyGroup studyGroup, StudyGroupUpdateRequest request) {

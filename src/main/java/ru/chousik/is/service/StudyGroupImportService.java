@@ -48,6 +48,7 @@ public class StudyGroupImportService {
         this.importJobRepository = importJobRepository;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+        this.transactionTemplate.setIsolationLevel(TransactionDefinition.ISOLATION_SERIALIZABLE);
         this.entityChangeNotifier = entityChangeNotifier;
     }
 

@@ -75,8 +75,9 @@ public class StudyGroup {
     @Column(nullable = false)
     private Semester semesterEnum; // не null
 
-    @ManyToOne(cascade = CascadeType.ALL)
-    private Person groupAdmin; // может быть null
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "group_admin_id", unique = true)
+    private Person groupAdmin; // может быть null, но не повторяется в других группах
 
     @PrePersist
     protected void onCreate() {
