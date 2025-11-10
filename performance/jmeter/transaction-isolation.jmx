@@ -2,7 +2,7 @@
 <jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
   <hashTree>
     <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="IS Transaction Isolation" enabled="true">
-      <stringProp name="TestPlan.comments">Сценарий эмуляции одновременной работы пользователей для проверки изоляции транзакций StudyGroupService.</stringProp>
+      <stringProp name="TestPlan.comments">Покрывает параллельное создание, редактирование, удаление и импорт учебных групп, а также проверку ограничений уникальности.</stringProp>
       <boolProp name="TestPlan.functional_mode">false</boolProp>
       <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
       <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
@@ -23,6 +23,16 @@
             <stringProp name="Argument.value">8080</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
+          <elementProp name="importFile" elementType="Argument">
+            <stringProp name="Argument.name">importFile</stringProp>
+            <stringProp name="Argument.value">example/example.yaml</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="importBoundary" elementType="Argument">
+            <stringProp name="Argument.name">importBoundary</stringProp>
+            <stringProp name="Argument.value">----ISBoundaryAaB03x</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
         </collectionProp>
       </elementProp>
       <stringProp name="TestPlan.user_define_classpath"/>
@@ -38,7 +48,7 @@
         <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
       </ConfigTestElement>
       <hashTree/>
-      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Default headers" enabled="true">
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Default JSON headers" enabled="true">
         <collectionProp name="HeaderManager.headers">
           <elementProp name="Content-Type" elementType="Header">
             <stringProp name="Header.name">Content-Type</stringProp>
@@ -66,7 +76,23 @@
         <stringProp name="ThreadGroup.delay"/>
       </SetupThreadGroup>
       <hashTree>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create base study group" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Seed identifiers" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"/>
+          <stringProp name="filename"/>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">import java.util.concurrent.ThreadLocalRandom
+import java.util.Locale
+
+def rnd = ThreadLocalRandom.current()
+def suffix = Long.toString(System.currentTimeMillis())
+props.put("runSuffix", suffix)
+props.put("seedX", String.valueOf(rnd.nextLong(5000L, 9000L)))
+props.put("seedY", String.format(Locale.US, "%.2f", rnd.nextDouble(10d, 80d)))
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create base group (updates)" enabled="true">
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments">
@@ -74,29 +100,29 @@
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{
   "coordinates": {
-    "x": ${__Random(100000,999999,coordX)} ,
-    "y": ${__Random(10,90,coordY)}
+    "x": ${__Random(10000,99999,updX)},
+    "y": ${__groovy(String.format(java.util.Locale.US, "%.2f", 15 + Math.random() * 20),updY,)}
   },
-  "studentsCount": 30,
-  "expelledStudents": 1,
+  "studentsCount": 22,
+  "expelledStudents": 2,
   "course": 2,
   "transferredStudents": 1,
   "formOfEducation": "FULL_TIME_EDUCATION",
-  "shouldBeExpelled": 1,
+  "shouldBeExpelled": 2,
   "averageMark": 4,
   "semesterEnum": "SECOND",
   "groupAdmin": {
-    "name": "Isolation Owner ${__threadNum}",
+    "name": "Baseline Admin ${__threadNum}",
     "hairColor": "BLACK",
     "eyeColor": "YELLOW",
     "height": 180,
-    "weight": 75.5,
+    "weight": 74.5,
     "nationality": "FRANCE",
     "location": {
       "x": 5,
-      "y": 10.5,
-      "z": 3.0,
-      "name": "Isolation Lab"
+      "y": 14.0,
+      "z": 3.1,
+      "name": "HQ"
     }
   }
 }</stringProp>
@@ -110,22 +136,267 @@
         <hashTree>
           <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract base group id" enabled="true">
             <boolProp name="JSONPostProcessor.compute_concat">false</boolProp>
-            <stringProp name="JSONPostProcessor.referenceNames">baseGroupId</stringProp>
+            <stringProp name="JSONPostProcessor.referenceNames">targetGroupId</stringProp>
             <stringProp name="JSONPostProcessor.jsonPathExprs">$.id</stringProp>
             <stringProp name="JSONPostProcessor.match_numbers">0</stringProp>
             <stringProp name="JSONPostProcessor.defaultValues">NOT_FOUND</stringProp>
             <stringProp name="JSONPostProcessor.concat_separator">,</stringProp>
           </JSONPostProcessor>
           <hashTree/>
-          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Store base group id" enabled="true">
+          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract base admin id" enabled="true">
+            <boolProp name="JSONPostProcessor.compute_concat">false</boolProp>
+            <stringProp name="JSONPostProcessor.referenceNames">baseAdminId</stringProp>
+            <stringProp name="JSONPostProcessor.jsonPathExprs">$.groupAdmin.id</stringProp>
+            <stringProp name="JSONPostProcessor.match_numbers">0</stringProp>
+            <stringProp name="JSONPostProcessor.defaultValues">NOT_FOUND</stringProp>
+            <stringProp name="JSONPostProcessor.concat_separator">,</stringProp>
+          </JSONPostProcessor>
+          <hashTree/>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Store base ids" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"/>
             <stringProp name="filename"/>
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="script">if (!vars.get("baseGroupId") || vars.get("baseGroupId") == "NOT_FOUND") {
-    throw new IllegalStateException("Не удалось извлечь идентификатор созданной учебной группы")
+            <stringProp name="script">if (!vars.get("targetGroupId") || vars.get("targetGroupId") == "NOT_FOUND") {
+    throw new IllegalStateException("Не удалось получить идентификатор базовой группы")
 }
-props.put("baseGroupId", vars.get("baseGroupId"))
+props.put("targetGroupId", vars.get("targetGroupId"))
+props.put("baseAdminId", vars.get("baseAdminId"))
+</stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create delete candidate" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{
+  "coordinates": {
+    "x": ${__Random(20000,30000,delX)},
+    "y": ${__groovy(String.format(java.util.Locale.US, "%.2f", 10 + Math.random() * 10),delY,)}
+  },
+  "studentsCount": 18,
+  "expelledStudents": 1,
+  "course": 1,
+  "transferredStudents": 1,
+  "formOfEducation": "EVENING_CLASSES",
+  "shouldBeExpelled": 1,
+  "semesterEnum": "FIRST"
+}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.path">/api/v1/study-groups</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract delete group id" enabled="true">
+            <boolProp name="JSONPostProcessor.compute_concat">false</boolProp>
+            <stringProp name="JSONPostProcessor.referenceNames">deleteGroupId</stringProp>
+            <stringProp name="JSONPostProcessor.jsonPathExprs">$.id</stringProp>
+            <stringProp name="JSONPostProcessor.match_numbers">0</stringProp>
+            <stringProp name="JSONPostProcessor.defaultValues">NOT_FOUND</stringProp>
+            <stringProp name="JSONPostProcessor.concat_separator">,</stringProp>
+          </JSONPostProcessor>
+          <hashTree/>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Store delete id" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">if (!vars.get("deleteGroupId") || vars.get("deleteGroupId") == "NOT_FOUND") {
+    throw new IllegalStateException("Не удалось получить идентификатор группы для удаления")
+}
+props.put("deleteGroupId", vars.get("deleteGroupId"))
+</stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create shared admin group A" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{
+  "coordinates": {
+    "x": ${__Random(40000,50000,aX)},
+    "y": ${__groovy(String.format(java.util.Locale.US, "%.2f", 20 + Math.random() * 10),aY,)}
+  },
+  "studentsCount": 16,
+  "expelledStudents": 1,
+  "course": 3,
+  "transferredStudents": 1,
+  "formOfEducation": "FULL_TIME_EDUCATION",
+  "shouldBeExpelled": 1,
+  "semesterEnum": "FOURTH"
+}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.path">/api/v1/study-groups</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract group A id" enabled="true">
+            <boolProp name="JSONPostProcessor.compute_concat">false</boolProp>
+            <stringProp name="JSONPostProcessor.referenceNames">groupAId</stringProp>
+            <stringProp name="JSONPostProcessor.jsonPathExprs">$.id</stringProp>
+            <stringProp name="JSONPostProcessor.match_numbers">0</stringProp>
+            <stringProp name="JSONPostProcessor.defaultValues">NOT_FOUND</stringProp>
+            <stringProp name="JSONPostProcessor.concat_separator">,</stringProp>
+          </JSONPostProcessor>
+          <hashTree/>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Store group A id" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">if (!vars.get("groupAId") || vars.get("groupAId") == "NOT_FOUND") {
+    throw new IllegalStateException("Не удалось получить идентификатор группы A")
+}
+props.put("sharedGroupAId", vars.get("groupAId"))
+</stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create shared admin group B" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{
+  "coordinates": {
+    "x": ${__Random(51000,60000,bX)},
+    "y": ${__groovy(String.format(java.util.Locale.US, "%.2f", 30 + Math.random() * 10),bY,)}
+  },
+  "studentsCount": 20,
+  "expelledStudents": 2,
+  "course": 4,
+  "transferredStudents": 2,
+  "formOfEducation": "DISTANCE_EDUCATION",
+  "shouldBeExpelled": 2,
+  "semesterEnum": "FIFTH"
+}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.path">/api/v1/study-groups</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract group B id" enabled="true">
+            <boolProp name="JSONPostProcessor.compute_concat">false</boolProp>
+            <stringProp name="JSONPostProcessor.referenceNames">groupBId</stringProp>
+            <stringProp name="JSONPostProcessor.jsonPathExprs">$.id</stringProp>
+            <stringProp name="JSONPostProcessor.match_numbers">0</stringProp>
+            <stringProp name="JSONPostProcessor.defaultValues">NOT_FOUND</stringProp>
+            <stringProp name="JSONPostProcessor.concat_separator">,</stringProp>
+          </JSONPostProcessor>
+          <hashTree/>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Store group B id" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">if (!vars.get("groupBId") || vars.get("groupBId") == "NOT_FOUND") {
+    throw new IllegalStateException("Не удалось получить идентификатор группы B")
+}
+props.put("sharedGroupBId", vars.get("groupBId"))
+</stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create shared admin person" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{
+  "name": "Shared Admin",
+  "hairColor": "YELLOW",
+  "eyeColor": "BLACK",
+  "height": 172,
+  "weight": 68.4,
+  "nationality": "INDIA"
+}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.path">/api/v1/persons</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract shared admin person id" enabled="true">
+            <boolProp name="JSONPostProcessor.compute_concat">false</boolProp>
+            <stringProp name="JSONPostProcessor.referenceNames">sharedAdminId</stringProp>
+            <stringProp name="JSONPostProcessor.jsonPathExprs">$.id</stringProp>
+            <stringProp name="JSONPostProcessor.match_numbers">0</stringProp>
+            <stringProp name="JSONPostProcessor.defaultValues">NOT_FOUND</stringProp>
+            <stringProp name="JSONPostProcessor.concat_separator">,</stringProp>
+          </JSONPostProcessor>
+          <hashTree/>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Store shared admin id" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">if (!vars.get("sharedAdminId") || vars.get("sharedAdminId") == "NOT_FOUND") {
+    throw new IllegalStateException("Не удалось создать администратора для конфликта")
+}
+props.put("sharedAdminId", vars.get("sharedAdminId"))
+</stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create exclusive admin" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{
+  "name": "Exclusive Admin",
+  "hairColor": "BLACK",
+  "eyeColor": "YELLOW",
+  "height": 176,
+  "weight": 70.2,
+  "nationality": "FRANCE"
+}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.path">/api/v1/persons</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract exclusive admin id" enabled="true">
+            <boolProp name="JSONPostProcessor.compute_concat">false</boolProp>
+            <stringProp name="JSONPostProcessor.referenceNames">exclusiveAdminId</stringProp>
+            <stringProp name="JSONPostProcessor.jsonPathExprs">$.id</stringProp>
+            <stringProp name="JSONPostProcessor.match_numbers">0</stringProp>
+            <stringProp name="JSONPostProcessor.defaultValues">NOT_FOUND</stringProp>
+            <stringProp name="JSONPostProcessor.concat_separator">,</stringProp>
+          </JSONPostProcessor>
+          <hashTree/>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Store exclusive admin id" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">if (!vars.get("exclusiveAdminId") || vars.get("exclusiveAdminId") == "NOT_FOUND") {
+    throw new IllegalStateException("Не удалось создать администратора для теста уникальности")
+}
+props.put("exclusiveAdminId", vars.get("exclusiveAdminId"))
 </stringProp>
           </JSR223PostProcessor>
           <hashTree/>
@@ -146,20 +417,20 @@ props.put("baseGroupId", vars.get("baseGroupId"))
         <stringProp name="ThreadGroup.delay"/>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Resolve target id" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Resolve target id (writers)" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"/>
           <stringProp name="filename"/>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">def id = props.get("baseGroupId")
+          <stringProp name="script">def id = props.get("targetGroupId")
 if (!id) {
-    throw new IllegalStateException("Свойство baseGroupId не установлено setup-группой")
+    throw new IllegalStateException("targetGroupId не найден")
 }
 vars.put("targetGroupId", id)
 </stringProp>
         </JSR223Sampler>
         <hashTree/>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Read group before update" enabled="true">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Read before update" enabled="true">
           <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments"/>
@@ -168,36 +439,29 @@ vars.put("targetGroupId", id)
           <stringProp name="HTTPSampler.method">GET</stringProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract current students" enabled="true">
+          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract students count" enabled="true">
             <boolProp name="JSONPostProcessor.compute_concat">false</boolProp>
             <stringProp name="JSONPostProcessor.referenceNames">currentStudentsCount</stringProp>
             <stringProp name="JSONPostProcessor.jsonPathExprs">$.studentsCount</stringProp>
             <stringProp name="JSONPostProcessor.match_numbers">0</stringProp>
-            <stringProp name="JSONPostProcessor.defaultValues">0</stringProp>
+            <stringProp name="JSONPostProcessor.defaultValues">20</stringProp>
             <stringProp name="JSONPostProcessor.concat_separator">,</stringProp>
           </JSONPostProcessor>
           <hashTree/>
-          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Compute next students" enabled="true">
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Compute next count" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"/>
             <stringProp name="filename"/>
             <stringProp name="cacheKey">true</stringProp>
-            <stringProp name="script">long current = (vars.get("currentStudentsCount") ?: "0") as long
-long next
-if (current &gt; 18) {
-    next = current - 2
-} else if (current &lt; 12) {
-    next = current + 3
-} else {
-    next = current + (Math.random() &gt; 0.5d ? 1 : -1)
-}
-next = Math.max(10L, Math.min(30L, next))
+            <stringProp name="script">long current = (vars.get("currentStudentsCount") ?: "20") as long
+long delta = current &lt; 20 ? 2 : -1
+long next = Math.max(10L, Math.min(30L, current + delta))
 vars.put("nextStudentsCount", String.valueOf(next))
 </stringProp>
           </JSR223PostProcessor>
           <hashTree/>
         </hashTree>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Update students count" enabled="true">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Patch students count" enabled="true">
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments">
@@ -207,7 +471,7 @@ vars.put("nextStudentsCount", String.valueOf(next))
   "studentsCount": ${nextStudentsCount},
   "expelledStudents": ${__Random(1,3,expRand)},
   "transferredStudents": ${__Random(1,3,trRand)},
-  "shouldBeExpelled": 1
+  "shouldBeExpelled": 2
 }</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
@@ -217,7 +481,7 @@ vars.put("nextStudentsCount", String.valueOf(next))
           <stringProp name="HTTPSampler.method">PATCH</stringProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <JSONAssertion guiclass="JSONAssertionGui" testclass="JSONAssertion" testname="Updated count assertion" enabled="true">
+          <JSONAssertion guiclass="JSONAssertionGui" testclass="JSONAssertion" testname="Students count updated" enabled="true">
             <boolProp name="JSON_ASSERTION.invert">false</boolProp>
             <boolProp name="JSON_ASSERTION.isRegex">false</boolProp>
             <boolProp name="JSON_ASSERTION.jsonValidation">false</boolProp>
@@ -244,20 +508,20 @@ vars.put("nextStudentsCount", String.valueOf(next))
         <stringProp name="ThreadGroup.delay"/>
       </ThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Resolve reader target" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Resolve target id (readers)" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"/>
           <stringProp name="filename"/>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">def id = props.get("baseGroupId")
+          <stringProp name="script">def id = props.get("targetGroupId")
 if (!id) {
-    throw new IllegalStateException("Свойство baseGroupId не установлено setup-группой")
+    throw new IllegalStateException("targetGroupId не найден для читателей")
 }
 vars.put("targetGroupId", id)
 </stringProp>
         </JSR223Sampler>
         <hashTree/>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Read group snapshot" enabled="true">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Read snapshot" enabled="true">
           <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments"/>
@@ -266,7 +530,7 @@ vars.put("targetGroupId", id)
           <stringProp name="HTTPSampler.method">GET</stringProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Consistent snapshot assertion" enabled="true">
+          <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Consistent snapshot" enabled="true">
             <stringProp name="scriptLanguage">groovy</stringProp>
             <stringProp name="parameters"/>
             <stringProp name="filename"/>
@@ -275,20 +539,279 @@ vars.put("targetGroupId", id)
 
 def response = prev.getResponseDataAsString()
 if (!response) {
-    throw new AssertionError("Пустой ответ от сервиса")
+    throw new AssertionError("Пустой ответ при чтении группы")
 }
 def payload = new JsonSlurper().parseText(response)
-if (payload.studentsCount == null) {
-    throw new AssertionError("studentsCount отсутствует в ответе")
-}
-if (payload.studentsCount &lt; 10) {
-    throw new AssertionError("Обнаружено грязное чтение: studentsCount=${payload.studentsCount}")
+if (payload.studentsCount == null || payload.studentsCount &lt; 10) {
+    throw new AssertionError("Обнаружено грязное чтение: studentsCount=" + payload.studentsCount)
 }
 if (!payload.coordinates || payload.coordinates.x == null || payload.coordinates.x &lt;= 0) {
-    throw new AssertionError("Координаты повреждены в ответе: ${payload.coordinates}")
+    throw new AssertionError("Повреждены координаты в ответе")
 }
 </stringProp>
           </JSR223Assertion>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Concurrent deleters" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">5</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">5</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">2</stringProp>
+        <longProp name="ThreadGroup.start_time">1729872000000</longProp>
+        <longProp name="ThreadGroup.end_time">1729872000000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"/>
+        <stringProp name="ThreadGroup.delay"/>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Resolve delete id" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"/>
+          <stringProp name="filename"/>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">def id = props.get("deleteGroupId")
+if (!id) {
+    throw new IllegalStateException("deleteGroupId не найден")
+}
+vars.put("deleteGroupId", id)
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Delete shared group" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.path">/api/v1/study-groups/${deleteGroupId}</stringProp>
+          <stringProp name="HTTPSampler.method">DELETE</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Delete status assertion" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">def code = prev.getResponseCode() as int
+if (code != 200 &amp;&amp; code != 204) {
+    throw new AssertionError("Ожидались статусы 200/204, получено " + code)
+}
+</stringProp>
+          </JSR223Assertion>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Shared admin claimers" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">2</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <longProp name="ThreadGroup.start_time">1729872000000</longProp>
+        <longProp name="ThreadGroup.end_time">1729872000000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"/>
+        <stringProp name="ThreadGroup.delay"/>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Resolve shared admin target" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"/>
+          <stringProp name="filename"/>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">def targets = [props.get("sharedGroupAId"), props.get("sharedGroupBId")]
+if (targets.any { it == null }) {
+    throw new IllegalStateException("Нет идентификаторов групп для теста администратора")
+}
+int idx = (ctx.getThreadNum() - 1) % targets.size()
+vars.put("claimGroupId", targets[idx])
+vars.put("sharedAdminId", props.get("sharedAdminId"))
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Assign shared admin" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{
+  "groupAdminId": ${sharedAdminId}
+}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.path">/api/v1/study-groups/${claimGroupId}</stringProp>
+          <stringProp name="HTTPSampler.method">PATCH</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Shared admin assertion" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">def code = prev.getResponseCode() as int
+if (code == 200) {
+    return
+}
+if (code == 400) {
+    def body = prev.getResponseDataAsString()
+    if (body == null || !body.contains("Администратор уже закреплён")) {
+        throw new AssertionError("Некорректное сообщение об ошибке при конфликте администратора")
+    }
+    return
+}
+throw new AssertionError("Ожидались 200 или 400, получено " + code)
+</stringProp>
+          </JSR223Assertion>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Duplicate admin creators" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">6</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">2</stringProp>
+        <longProp name="ThreadGroup.start_time">1729872000000</longProp>
+        <longProp name="ThreadGroup.end_time">1729872000000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"/>
+        <stringProp name="ThreadGroup.delay"/>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Resolve exclusive admin" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"/>
+          <stringProp name="filename"/>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script">def id = props.get("exclusiveAdminId")
+if (!id) {
+    throw new IllegalStateException("exclusiveAdminId не найден")
+}
+vars.put("exclusiveAdminId", id)
+</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Create group with existing admin" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{
+  "coordinates": {
+    "x": ${__Random(60000,90000,dupX)},
+    "y": ${__groovy(String.format(java.util.Locale.US, "%.2f", 40 + Math.random() * 20),dupY,)}
+  },
+  "studentsCount": 24,
+  "expelledStudents": 2,
+  "course": 3,
+  "transferredStudents": 2,
+  "formOfEducation": "FULL_TIME_EDUCATION",
+  "shouldBeExpelled": 2,
+  "averageMark": 5,
+  "semesterEnum": "SIXTH",
+  "groupAdminId": ${exclusiveAdminId}
+}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.path">/api/v1/study-groups</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Duplicate admin assertion" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">def code = prev.getResponseCode() as int
+if (code == 200) {
+    return
+}
+if (code == 400) {
+    def body = prev.getResponseDataAsString()
+    if (body == null || !body.contains("Администратор уже закреплён")) {
+        throw new AssertionError("Ожидалось сообщение о занятости администратора")
+    }
+    return
+}
+throw new AssertionError("Ожидались 200 или 400, получено " + code)
+</stringProp>
+          </JSR223Assertion>
+          <hashTree/>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Store exclusive group" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">if ((prev.getResponseCode() as int) == 200) {
+    import groovy.json.JsonSlurper
+    def payload = new JsonSlurper().parseText(prev.getResponseDataAsString())
+    def id = payload.id
+    if (id) {
+        def existing = props.get("exclusiveGroupId")
+        props.put("exclusiveGroupId", existing ? existing + "," + id : id)
+    }
+}
+</stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Import traffic" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">1</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <longProp name="ThreadGroup.start_time">1729872000000</longProp>
+        <longProp name="ThreadGroup.end_time">1729872000000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"/>
+        <stringProp name="ThreadGroup.delay"/>
+      </ThreadGroup>
+      <hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Import study groups" enabled="true">
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">--${importBoundary}\r\nContent-Disposition: form-data; name="file"; filename="import.yaml"\r\nContent-Type: application/x-yaml\r\n\r\n${__FileToString(${importFile},,UTF-8)}\r\n--${importBoundary}--\r\n</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.path">/api/v1/imports/study-groups</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">true</boolProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Multipart headers" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="Content-Type" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">multipart/form-data; boundary=${importBoundary}</stringProp>
+              </elementProp>
+              <elementProp name="Accept" elementType="Header">
+                <stringProp name="Header.name">Accept</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
           <hashTree/>
         </hashTree>
       </hashTree>
@@ -307,36 +830,56 @@ if (!payload.coordinates || payload.coordinates.x == null || payload.coordinates
         <stringProp name="ThreadGroup.delay"/>
       </PostThreadGroup>
       <hashTree>
-        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Resolve teardown target" enabled="true">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Cleanup entities" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"/>
           <stringProp name="filename"/>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">def id = props.get("baseGroupId")
-if (!id) {
-    throw new IllegalStateException("Свойство baseGroupId не установлено setup-группой")
+          <stringProp name="script">import java.net.HttpURLConnection
+import java.net.URL
+
+def protocol = props.get("protocol") ?: "http"
+def host = props.get("host") ?: "localhost"
+def port = props.get("port") ?: "8080"
+
+def sendDelete = { String path ->
+    if (!path) {
+        return
+    }
+    try {
+        def url = new URL("${protocol}://${host}:${port}${path}")
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection()
+        conn.setRequestMethod("DELETE")
+        conn.setConnectTimeout(5000)
+        conn.setReadTimeout(5000)
+        conn.getResponseCode()
+        try {
+            conn.getInputStream()?.close()
+        } catch (IOException ignore) {
+            conn.getErrorStream()?.close()
+        }
+        conn.disconnect()
+    } catch (Exception ignored) {
+    }
 }
-vars.put("targetGroupId", id)
+
+def collect = []
+["targetGroupId", "sharedGroupAId", "sharedGroupBId", "deleteGroupId"].each { key ->
+    def value = props.get(key)
+    if (value) {
+        collect &lt;&lt; value
+    }
+}
+def extra = props.get("exclusiveGroupId")
+if (extra) {
+    extra.split(",").each { collect &lt;&lt; it }
+}
+collect.each { sendDelete("/api/v1/study-groups/${it}") }
+
+sendDelete("/api/v1/persons/${props.get('sharedAdminId')}")
+sendDelete("/api/v1/persons/${props.get('exclusiveAdminId')}")
 </stringProp>
         </JSR223Sampler>
-        <hashTree/>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Fetch final state" enabled="true">
-          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
-            <collectionProp name="Arguments.arguments"/>
-          </elementProp>
-          <stringProp name="HTTPSampler.path">/api/v1/study-groups/${targetGroupId}</stringProp>
-          <stringProp name="HTTPSampler.method">GET</stringProp>
-        </HTTPSamplerProxy>
-        <hashTree/>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Delete base group" enabled="true">
-          <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
-            <collectionProp name="Arguments.arguments"/>
-          </elementProp>
-          <stringProp name="HTTPSampler.path">/api/v1/study-groups/${targetGroupId}</stringProp>
-          <stringProp name="HTTPSampler.method">DELETE</stringProp>
-        </HTTPSamplerProxy>
         <hashTree/>
       </hashTree>
       <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary report" enabled="true">
