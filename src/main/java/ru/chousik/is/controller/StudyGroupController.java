@@ -1,6 +1,5 @@
 package ru.chousik.is.controller;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,7 +21,6 @@ import ru.chousik.is.entity.Semester;
 import ru.chousik.is.service.StudyGroupService;
 
 import java.util.List;
-import jakarta.validation.constraints.NotNull;
 
 @RestController
 @RequestMapping
@@ -33,26 +31,26 @@ public class StudyGroupController extends PageHelper implements StudyGroupsApi {
 
     @Override
     public ResponseEntity<List<StudyGroupResponse>> apiV1StudyGroupsByIdsGet(
-            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids) {
+            @RequestParam(value = "ids", required = true) List<Long> ids) {
         return ResponseEntity.ok(studyGroupService.getByIds(ids));
     }
 
     @Override
     public ResponseEntity<Long> apiV1StudyGroupsBySemesterDelete(
-            @NotNull @Valid @RequestParam(value = "semesterEnum", required = true) Semester semesterEnum) {
+            @RequestParam(value = "semesterEnum", required = true) Semester semesterEnum) {
         long deleted = studyGroupService.deleteAllBySemester(semesterEnum);
         return ResponseEntity.ok(deleted);
     }
 
     @Override
     public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsBySemesterOneDelete(
-            @NotNull @Valid @RequestParam(value = "semesterEnum", required = true) Semester semesterEnum) {
+            @RequestParam(value = "semesterEnum", required = true) Semester semesterEnum) {
         return ResponseEntity.ok(studyGroupService.deleteOneBySemester(semesterEnum));
     }
 
     @Override
     public ResponseEntity<Void> apiV1StudyGroupsDelete(
-            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids) {
+            @RequestParam(value = "ids", required = true) List<Long> ids) {
         studyGroupService.deleteMany(ids);
         return ResponseEntity.noContent().build();
     }
@@ -71,7 +69,7 @@ public class StudyGroupController extends PageHelper implements StudyGroupsApi {
 
     @Override
     public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdDelete(
-            @NotNull @PathVariable("id") Long id) {
+            @PathVariable("id") Long id) {
         StudyGroupResponse response = studyGroupService.delete(id);
         if (response == null) {
             return ResponseEntity.noContent().build();
@@ -81,27 +79,27 @@ public class StudyGroupController extends PageHelper implements StudyGroupsApi {
 
     @Override
     public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdGet(
-            @NotNull @PathVariable("id") Long id) {
+            @PathVariable("id") Long id) {
         return ResponseEntity.ok(studyGroupService.getById(id));
     }
 
     @Override
     public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdPatch(
-            @NotNull @PathVariable("id") Long id,
-            @Valid @RequestBody StudyGroupUpdateRequest studyGroupUpdateRequest) {
+            @PathVariable("id") Long id,
+            @RequestBody StudyGroupUpdateRequest studyGroupUpdateRequest) {
         return ResponseEntity.ok(studyGroupService.update(id, studyGroupUpdateRequest));
     }
 
     @Override
     public ResponseEntity<List<StudyGroupResponse>> apiV1StudyGroupsPatch(
-            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids,
-            @Valid @RequestBody StudyGroupUpdateRequest studyGroupUpdateRequest) {
+            @RequestParam(value = "ids", required = true) List<Long> ids,
+            @RequestBody StudyGroupUpdateRequest studyGroupUpdateRequest) {
         return ResponseEntity.ok(studyGroupService.updateMany(ids, studyGroupUpdateRequest));
     }
 
     @Override
     public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsPost(
-            @Valid @RequestBody StudyGroupAddRequest studyGroupAddRequest) {
+            @RequestBody StudyGroupAddRequest studyGroupAddRequest) {
         return ResponseEntity.ok(studyGroupService.create(studyGroupAddRequest));
     }
 

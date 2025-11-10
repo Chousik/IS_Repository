@@ -11,6 +11,6 @@ import java.time.LocalDateTime;
  */
 public record StudyGroupResponse(Long id, String name, @NotNull CoordinatesResponse coordinates,
                                  LocalDateTime creationDate, Long studentsCount, long expelledStudents,
-                                 long transferredStudents, FormOfEducation formOfEducation, long shouldBeExpelled,
+                                 int course, long transferredStudents, FormOfEducation formOfEducation, long shouldBeExpelled,
                                  Integer averageMark, Semester semesterEnum, PersonResponse groupAdmin) {
 }

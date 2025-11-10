@@ -1,6 +1,5 @@
 package ru.chousik.is.controller;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,7 +18,6 @@ import ru.chousik.is.dto.response.PersonResponse;
 import ru.chousik.is.service.PersonService;
 
 import java.util.List;
-import jakarta.validation.constraints.NotNull;
 
 @RestController
 @RequestMapping
@@ -30,13 +28,13 @@ public class PersonController extends PageHelper implements PersonsApi {
 
     @Override
     public ResponseEntity<List<PersonResponse>> apiV1PersonsByIdsGet(
-            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids) {
+            @RequestParam(value = "ids", required = true) List<Long> ids) {
         return ResponseEntity.ok(personService.getByIds(ids));
     }
 
     @Override
     public ResponseEntity<Void> apiV1PersonsDelete(
-            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids) {
+            @RequestParam(value = "ids", required = true) List<Long> ids) {
         personService.deleteMany(ids);
         return ResponseEntity.noContent().build();
     }
@@ -55,7 +53,7 @@ public class PersonController extends PageHelper implements PersonsApi {
 
     @Override
     public ResponseEntity<PersonResponse> apiV1PersonsIdDelete(
-            @NotNull @PathVariable("id") Long id) {
+            @PathVariable("id") Long id) {
         PersonResponse response = personService.delete(id);
         if (response == null) {
             return ResponseEntity.noContent().build();
@@ -65,27 +63,27 @@ public class PersonController extends PageHelper implements PersonsApi {
 
     @Override
     public ResponseEntity<PersonResponse> apiV1PersonsIdGet(
-            @NotNull @PathVariable("id") Long id) {
+            @PathVariable("id") Long id) {
         return ResponseEntity.ok(personService.getById(id));
     }
 
     @Override
     public ResponseEntity<PersonResponse> apiV1PersonsIdPatch(
-            @NotNull @PathVariable("id") Long id,
-            @Valid @RequestBody PersonUpdateRequest personUpdateRequest) {
+            @PathVariable("id") Long id,
+            @RequestBody PersonUpdateRequest personUpdateRequest) {
         return ResponseEntity.ok(personService.update(id, personUpdateRequest));
     }
 
     @Override
     public ResponseEntity<List<PersonResponse>> apiV1PersonsPatch(
-            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids,
-            @Valid @RequestBody PersonUpdateRequest personUpdateRequest) {
+            @RequestParam(value = "ids", required = true) List<Long> ids,
+            @RequestBody PersonUpdateRequest personUpdateRequest) {
         return ResponseEntity.ok(personService.updateMany(ids, personUpdateRequest));
     }
 
     @Override
     public ResponseEntity<PersonResponse> apiV1PersonsPost(
-            @Valid @RequestBody PersonAddRequest personAddRequest) {
+            @RequestBody PersonAddRequest personAddRequest) {
         return ResponseEntity.ok(personService.create(personAddRequest));
     }
 }

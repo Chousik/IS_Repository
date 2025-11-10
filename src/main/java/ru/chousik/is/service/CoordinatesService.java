@@ -56,6 +56,7 @@ public class CoordinatesService {
 
     public CoordinatesResponse create(CoordinatesAddRequest request) {
         Coordinates coordinates = coordinatesMapper.toEntity(request);
+        ensureUnique(coordinates.getX(), coordinates.getY(), null);
         Coordinates saved = coordinatesRepository.save(coordinates);
         CoordinatesResponse response = coordinatesMapper.toCoordinatesResponse(saved);
         entityChangeNotifier.publish("COORDINATES", "CREATED", response);
@@ -71,6 +72,7 @@ public class CoordinatesService {
                 .orElseThrow(() -> new NotFoundException("Сущность с идентификатором %d не найдена".formatted(id)));
 
         coordinatesMapper.updateWithNull(request, coordinates);
+        ensureUnique(coordinates.getX(), coordinates.getY(), coordinates.getId());
         Coordinates saved = coordinatesRepository.save(coordinates);
         CoordinatesResponse response = coordinatesMapper.toCoordinatesResponse(saved);
         entityChangeNotifier.publish("COORDINATES", "UPDATED", response);
@@ -87,6 +89,7 @@ public class CoordinatesService {
 
         for (Coordinates coordinate : coordinates) {
             coordinatesMapper.updateWithNull(request, coordinate);
+            ensureUnique(coordinate.getX(), coordinate.getY(), coordinate.getId());
         }
 
         List<Coordinates> saved = coordinatesRepository.saveAll(coordinates);
@@ -145,5 +148,16 @@ public class CoordinatesService {
         if (!missing.isEmpty()) {
             throw new NotFoundException("Сущности с идентификаторами %s не найдены".formatted(missing));
         }
+    }
+
+    private void ensureUnique(long x, Float y, Long currentId) {
+        if (y == null) {
+            throw new BadRequestException("Поле y не может быть пустым");
+        }
+        coordinatesRepository.findByXAndY(x, y)
+                .filter(existing -> currentId == null || !Objects.equals(existing.getId(), currentId))
+                .ifPresent(existing -> {
+                    throw new BadRequestException("Координаты с такими значениями уже существуют (id=" + existing.getId() + ")");
+                });
     }
 }

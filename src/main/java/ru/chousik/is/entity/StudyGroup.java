@@ -1,8 +1,14 @@
 package ru.chousik.is.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import lombok.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
@@ -21,7 +27,7 @@ public class StudyGroup {
 
     @NotBlank
     @Column(nullable = false)
-    private String name; // не null, не пустая строка
+    private String name; // генерируется автоматически, уникальное
 
     @NotNull
     @OneToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, optional = false)
@@ -32,8 +38,10 @@ public class StudyGroup {
     @Column(nullable = false, updatable = false)
     private LocalDateTime creationDate; // генерируется автоматически
 
+    @NotNull
     @Positive
-    private Long studentsCount; // >0, может быть null
+    @Column(nullable = false)
+    private Long studentsCount; // >0
 
     @Positive
     @Column(nullable = false)
@@ -41,10 +49,19 @@ public class StudyGroup {
 
     @Positive
     @Column(nullable = false)
+    private int course; // курс обучения
+
+    @Column(nullable = false)
+    private int sequenceNumber; // номер внутри курса+формы для генерации имени
+
+    @Positive
+    @Column(nullable = false)
     private long transferredStudents; // >0
 
+    @NotNull
     @Enumerated(EnumType.STRING)
-    private FormOfEducation formOfEducation; // может быть null
+    @Column(nullable = false)
+    private FormOfEducation formOfEducation; // обязателен для бизнес-ограничений
 
     @Positive
     @Column(nullable = false)

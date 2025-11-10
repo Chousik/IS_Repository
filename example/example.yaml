@@ -1,0 +1,36 @@
+# Образец YAML для импорта: перечисления допускают только значения из Color, FormOfEducation, Semester, Country.
+groups:
+  - course: 2
+    formOfEducation: FULL_TIME_EDUCATION
+    semesterEnum: SECOND
+    studentsCount: 28   # допустимо для очной формы (10..30)
+    expelledStudents: 1
+    transferredStudents: 2
+    shouldBeExpelled: 3
+    averageMark: 4
+    coordinates:
+      x: 150
+      y: 72.5
+    groupAdmin:
+      name: Alice Johnson
+      hairColor: BLACK
+      eyeColor: ORANGE
+      height: 170
+      weight: 55.5
+      nationality: FRANCE
+      location:
+        x: 5
+        y: 12.7
+        z: -3.2
+        name: Dormitory A
+  - course: 4
+    formOfEducation: DISTANCE_EDUCATION
+    semesterEnum: SIXTH
+    studentsCount: 40   # дистанционное обучение допускает 20..100 человек
+    expelledStudents: 2
+    transferredStudents: 1
+    shouldBeExpelled: 2
+    averageMark: 5
+    coordinates:
+      x: 40
+      y: 15.0

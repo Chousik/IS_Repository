@@ -54,6 +54,7 @@ val openApiTypeMappings = mapOf(
     "StudyGroupResponse" to "ru.chousik.is.dto.response.StudyGroupResponse",
     "StudyGroupShouldBeExpelledGroupResponse" to "ru.chousik.is.dto.response.StudyGroupShouldBeExpelledGroupResponse",
     "StudyGroupExpelledTotalResponse" to "ru.chousik.is.dto.response.StudyGroupExpelledTotalResponse",
+    "ImportJobResponse" to "ru.chousik.is.dto.response.ImportJobResponse",
     "PagedCoordinatesResponse" to "org.springframework.data.web.PagedModel",
     "PagedLocationResponse" to "org.springframework.data.web.PagedModel",
     "PagedPersonResponse" to "org.springframework.data.web.PagedModel",
@@ -156,6 +157,9 @@ dependencies {
     annotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
     // https://mvnrepository.com/artifact/com.nimbusds/nimbus-jose-jwt
     implementation("com.nimbusds:nimbus-jose-jwt:10.3.1")
+    implementation("org.yaml:snakeyaml:2.2")
+    implementation("org.flywaydb:flyway-core:11.10.0")
+    implementation("org.flywaydb:flyway-database-postgresql:11.10.0")
     api("io.swagger.core.v3:swagger-annotations:2.2.22")
     implementation("org.springframework.boot:spring-boot-starter-websocket")
     api("org.springframework:spring-web")
