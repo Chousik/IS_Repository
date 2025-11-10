@@ -50,12 +50,6 @@ import {
 export interface StudyGroupAddRequest {
     /**
      * 
-     * @type {string}
-     * @memberof StudyGroupAddRequest
-     */
-    name: string;
-    /**
-     * 
      * @type {number}
      * @memberof StudyGroupAddRequest
      */
@@ -71,7 +65,7 @@ export interface StudyGroupAddRequest {
      * @type {number}
      * @memberof StudyGroupAddRequest
      */
-    studentsCount?: number;
+    studentsCount: number;
     /**
      * 
      * @type {number}
@@ -83,13 +77,19 @@ export interface StudyGroupAddRequest {
      * @type {number}
      * @memberof StudyGroupAddRequest
      */
+    course: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof StudyGroupAddRequest
+     */
     transferredStudents: number;
     /**
      * 
      * @type {FormOfEducation}
      * @memberof StudyGroupAddRequest
      */
-    formOfEducation?: FormOfEducation;
+    formOfEducation: FormOfEducation;
     /**
      * 
      * @type {number}
@@ -128,9 +128,11 @@ export interface StudyGroupAddRequest {
  * Check if a given object implements the StudyGroupAddRequest interface.
  */
 export function instanceOfStudyGroupAddRequest(value: object): value is StudyGroupAddRequest {
-    if (!('name' in value) || value['name'] === undefined) return false;
+    if (!('studentsCount' in value) || value['studentsCount'] === undefined) return false;
     if (!('expelledStudents' in value) || value['expelledStudents'] === undefined) return false;
+    if (!('course' in value) || value['course'] === undefined) return false;
     if (!('transferredStudents' in value) || value['transferredStudents'] === undefined) return false;
+    if (!('formOfEducation' in value) || value['formOfEducation'] === undefined) return false;
     if (!('shouldBeExpelled' in value) || value['shouldBeExpelled'] === undefined) return false;
     if (!('semesterEnum' in value) || value['semesterEnum'] === undefined) return false;
     return true;
@@ -146,13 +148,13 @@ export function StudyGroupAddRequestFromJSONTyped(json: any, ignoreDiscriminator
     }
     return {
         
-        'name': json['name'],
         'coordinatesId': json['coordinatesId'] == null ? undefined : json['coordinatesId'],
         'coordinates': json['coordinates'] == null ? undefined : CoordinatesAddRequestFromJSON(json['coordinates']),
-        'studentsCount': json['studentsCount'] == null ? undefined : json['studentsCount'],
+        'studentsCount': json['studentsCount'],
         'expelledStudents': json['expelledStudents'],
+        'course': json['course'],
         'transferredStudents': json['transferredStudents'],
-        'formOfEducation': json['formOfEducation'] == null ? undefined : FormOfEducationFromJSON(json['formOfEducation']),
+        'formOfEducation': FormOfEducationFromJSON(json['formOfEducation']),
         'shouldBeExpelled': json['shouldBeExpelled'],
         'averageMark': json['averageMark'] == null ? undefined : json['averageMark'],
         'semesterEnum': SemesterFromJSON(json['semesterEnum']),
@@ -172,11 +174,11 @@ export function StudyGroupAddRequestToJSONTyped(value?: StudyGroupAddRequest | n
 
     return {
         
-        'name': value['name'],
         'coordinatesId': value['coordinatesId'],
         'coordinates': CoordinatesAddRequestToJSON(value['coordinates']),
         'studentsCount': value['studentsCount'],
         'expelledStudents': value['expelledStudents'],
+        'course': value['course'],
         'transferredStudents': value['transferredStudents'],
         'formOfEducation': FormOfEducationToJSON(value['formOfEducation']),
         'shouldBeExpelled': value['shouldBeExpelled'],
@@ -186,4 +188,3 @@ export function StudyGroupAddRequestToJSONTyped(value?: StudyGroupAddRequest | n
         'groupAdmin': PersonAddRequestToJSON(value['groupAdmin']),
     };
 }
-

@@ -220,6 +220,9 @@ const StudyGroupsPage = () => {
               <th onClick={() => handleSortToggle('name')} style={{ cursor: 'pointer' }}>
                 Название {sortIndicator(paging.sortField, paging.sortOrder, 'name')}
               </th>
+              <th onClick={() => handleSortToggle('course')} style={{ cursor: 'pointer' }}>
+                Курс {sortIndicator(paging.sortField, paging.sortOrder, 'course')}
+              </th>
               <th onClick={() => handleSortToggle('semesterEnum')} style={{ cursor: 'pointer' }}>
                 Семестр {sortIndicator(paging.sortField, paging.sortOrder, 'semesterEnum')}
               </th>
@@ -261,12 +264,13 @@ const StudyGroupsPage = () => {
                     style={{ cursor: 'pointer' }}>
                   <td>{group.id}</td>
                   <td>{group.name}</td>
+                  <td>{group.course}</td>
                   <td>{group.semesterEnum}</td>
                   <td>{group.formOfEducation ?? '—'}</td>
                   <td>
                     {group.coordinates ? `X: ${group.coordinates.x}, Y: ${group.coordinates.y}` : '—'}
                   </td>
-                  <td>{group.studentsCount ?? '—'}</td>
+                  <td>{group.studentsCount}</td>
                   <td>{group.expelledStudents}</td>
                   <td>{group.transferredStudents}</td>
                   <td>{group.shouldBeExpelled}</td>
@@ -329,9 +333,10 @@ const StudyGroupsPage = () => {
             <button className="secondary-btn" onClick={() => setSelectedGroup(null)}>Закрыть</button>
           </div>
           <div className="drawer-field"><strong>Семестр:</strong> {selectedGroup.semesterEnum}</div>
+          <div className="drawer-field"><strong>Курс:</strong> {selectedGroup.course}</div>
           <div className="drawer-field"><strong>Форма обучения:</strong> {selectedGroup.formOfEducation ?? '—'}</div>
           <div className="drawer-field"><strong>Координаты:</strong> X = {selectedGroup.coordinates?.x}, Y = {selectedGroup.coordinates?.y}</div>
-          <div className="drawer-field"><strong>Студентов:</strong> {selectedGroup.studentsCount ?? '—'}</div>
+          <div className="drawer-field"><strong>Студентов:</strong> {selectedGroup.studentsCount}</div>
           <div className="drawer-field"><strong>Отчислено:</strong> {selectedGroup.expelledStudents}</div>
           <div className="drawer-field"><strong>Переведено:</strong> {selectedGroup.transferredStudents}</div>
           <div className="drawer-field"><strong>Кол-во к отчислению:</strong> {selectedGroup.shouldBeExpelled}</div>
