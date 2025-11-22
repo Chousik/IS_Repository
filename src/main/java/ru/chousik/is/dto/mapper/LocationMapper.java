@@ -6,9 +6,9 @@ import org.mapstruct.MappingConstants;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 import org.mapstruct.ReportingPolicy;
-import ru.chousik.is.dto.request.LocationAddRequest;
-import ru.chousik.is.dto.request.LocationUpdateRequest;
-import ru.chousik.is.dto.response.LocationResponse;
+import ru.chousik.is.api.model.LocationAddRequest;
+import ru.chousik.is.api.model.LocationResponse;
+import ru.chousik.is.api.model.LocationUpdateRequest;
 import ru.chousik.is.entity.Location;
 
 @Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING)

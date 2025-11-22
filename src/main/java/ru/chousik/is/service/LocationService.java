@@ -7,10 +7,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.stereotype.Service;
+import ru.chousik.is.api.model.LocationAddRequest;
+import ru.chousik.is.api.model.LocationResponse;
+import ru.chousik.is.api.model.LocationUpdateRequest;
 import ru.chousik.is.dto.mapper.LocationMapper;
-import ru.chousik.is.dto.request.LocationAddRequest;
-import ru.chousik.is.dto.request.LocationUpdateRequest;
-import ru.chousik.is.dto.response.LocationResponse;
 import ru.chousik.is.entity.Location;
 import ru.chousik.is.event.EntityChangeNotifier;
 import ru.chousik.is.exception.BadRequestException;
@@ -134,10 +134,11 @@ public class LocationService {
     }
 
     private void validateUpdateRequest(LocationUpdateRequest request) {
-        if (request == null || (request.x() == null && request.y() == null && request.z() == null && request.name() == null)) {
+        if (request == null || (request.getX() == null && request.getY() == null
+                && request.getZ() == null && request.getName() == null)) {
             throw new BadRequestException("Не переданы поля для обновления локации");
         }
-        if (request.name() != null && request.name().isBlank()) {
+        if (request.getName() != null && request.getName().isBlank()) {
             throw new BadRequestException("Поле name не может быть пустым");
         }
     }

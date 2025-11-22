@@ -6,15 +6,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import ru.chousik.is.api.model.CoordinatesAddRequest;
+import ru.chousik.is.api.model.CoordinatesResponse;
+import ru.chousik.is.api.model.StudyGroupAddRequest;
+import ru.chousik.is.api.model.StudyGroupExpelledTotalResponse;
+import ru.chousik.is.api.model.StudyGroupResponse;
+import ru.chousik.is.api.model.StudyGroupShouldBeExpelledGroupResponse;
 import ru.chousik.is.dto.mapper.CoordinatesMapper;
 import ru.chousik.is.dto.mapper.LocationMapper;
 import ru.chousik.is.dto.mapper.StudyGroupMapper;
-import ru.chousik.is.dto.request.CoordinatesAddRequest;
-import ru.chousik.is.dto.request.StudyGroupAddRequest;
-import ru.chousik.is.dto.response.CoordinatesResponse;
-import ru.chousik.is.dto.response.StudyGroupExpelledTotalResponse;
-import ru.chousik.is.dto.response.StudyGroupResponse;
-import ru.chousik.is.dto.response.StudyGroupShouldBeExpelledGroupResponse;
 import ru.chousik.is.entity.Coordinates;
 import ru.chousik.is.entity.FormOfEducation;
 import ru.chousik.is.entity.Semester;
@@ -166,8 +166,8 @@ class StudyGroupServiceTest {
 
         assertEquals(1, result.size());
         StudyGroupShouldBeExpelledGroupResponse item = result.get(0);
-        assertEquals(12L, item.shouldBeExpelled());
-        assertEquals(3L, item.count());
+        assertEquals(12L, item.getShouldBeExpelled());
+        assertEquals(3L, item.getCount());
     }
 
     @Test
@@ -176,7 +176,7 @@ class StudyGroupServiceTest {
 
         StudyGroupExpelledTotalResponse response = service.totalExpelledStudents();
 
-        assertEquals(0L, response.totalExpelledStudents());
+        assertEquals(0L, response.getTotalExpelledStudents());
     }
 
     @Test
@@ -185,25 +185,22 @@ class StudyGroupServiceTest {
 
         StudyGroupExpelledTotalResponse response = service.totalExpelledStudents();
 
-        assertEquals(42L, response.totalExpelledStudents());
+        assertEquals(42L, response.getTotalExpelledStudents());
     }
 
     @Test
     void create_throwsWhenBothCoordinateSourcesProvided() {
-        StudyGroupAddRequest request = new StudyGroupAddRequest(
-                "Test",
-                11L,
-                new CoordinatesAddRequest(1L, 2.0f),
-                10L,
-                5L,
-                4L,
-                FormOfEducation.FULL_TIME_EDUCATION,
-                3L,
-                7,
-                Semester.FIRST,
-                null,
-                null
-        );
+        StudyGroupAddRequest request = new StudyGroupAddRequest()
+                .coordinatesId(11L)
+                .coordinates(new CoordinatesAddRequest().x(1L).y(2.0f))
+                .studentsCount(10L)
+                .expelledStudents(5L)
+                .course(3)
+                .transferredStudents(4L)
+                .formOfEducation(FormOfEducation.FULL_TIME_EDUCATION)
+                .shouldBeExpelled(3L)
+                .averageMark(7)
+                .semesterEnum(Semester.FIRST);
 
         assertThrows(BadRequestException.class, () -> service.create(request));
         verifyNoInteractions(studyGroupRepository, coordinatesRepository, studyGroupMapper, entityChangeNotifier);
@@ -211,20 +208,15 @@ class StudyGroupServiceTest {
 
     @Test
     void create_throwsWhenCoordinatesMissing() {
-        StudyGroupAddRequest request = new StudyGroupAddRequest(
-                "Test",
-                null,
-                null,
-                10L,
-                5L,
-                4L,
-                FormOfEducation.FULL_TIME_EDUCATION,
-                3L,
-                7,
-                Semester.FIRST,
-                null,
-                null
-        );
+        StudyGroupAddRequest request = new StudyGroupAddRequest()
+                .studentsCount(10L)
+                .expelledStudents(5L)
+                .course(3)
+                .transferredStudents(4L)
+                .formOfEducation(FormOfEducation.FULL_TIME_EDUCATION)
+                .shouldBeExpelled(3L)
+                .averageMark(7)
+                .semesterEnum(Semester.FIRST);
 
         BadRequestException ex = assertThrows(BadRequestException.class, () -> service.create(request));
         assertTrue(ex.getMessage().contains("Координаты обязательны"));
@@ -238,12 +230,14 @@ class StudyGroupServiceTest {
                 .coordinates(coordinates)
                 .studentsCount(10L)
                 .expelledStudents(2L)
+                .course(3)
                 .transferredStudents(1L)
                 .formOfEducation(FormOfEducation.FULL_TIME_EDUCATION)
                 .shouldBeExpelled(3L)
                 .averageMark(5)
                 .semesterEnum(semester)
                 .groupAdmin(null)
+                .sequenceNumber(1)
                 .build();
         group.setCreationDate(LocalDateTime.now());
         return group;
@@ -251,24 +245,22 @@ class StudyGroupServiceTest {
 
     private StudyGroupResponse toResponse(StudyGroup group) {
         Coordinates coords = group.getCoordinates();
-        CoordinatesResponse coordinatesResponse = new CoordinatesResponse(
-                coords != null ? coords.getId() : null,
-                coords != null ? coords.getX() : 0L,
-                coords != null ? coords.getY() : null
-        );
-        return new StudyGroupResponse(
-                group.getId(),
-                group.getName(),
-                coordinatesResponse,
-                group.getCreationDate(),
-                group.getStudentsCount(),
-                group.getExpelledStudents(),
-                group.getTransferredStudents(),
-                group.getFormOfEducation(),
-                group.getShouldBeExpelled(),
-                group.getAverageMark(),
-                group.getSemesterEnum(),
-                null
-        );
+        CoordinatesResponse coordinatesResponse = new CoordinatesResponse()
+                .id(coords != null ? coords.getId() : null)
+                .x(coords != null ? coords.getX() : 0L)
+                .y(coords != null ? coords.getY() : null);
+        return new StudyGroupResponse()
+                .id(group.getId())
+                .name(group.getName())
+                .coordinates(coordinatesResponse)
+                .creationDate(group.getCreationDate())
+                .studentsCount(group.getStudentsCount())
+                .expelledStudents(group.getExpelledStudents())
+                .course(group.getCourse())
+                .transferredStudents(group.getTransferredStudents())
+                .formOfEducation(group.getFormOfEducation())
+                .shouldBeExpelled(group.getShouldBeExpelled())
+                .averageMark(group.getAverageMark())
+                .semesterEnum(group.getSemesterEnum());
     }
 }

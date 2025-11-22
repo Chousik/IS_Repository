@@ -1,9 +1,7 @@
 package ru.chousik.is.controller;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PagedModel;
@@ -14,34 +12,29 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.chousik.is.api.CoordinatesApi;
-import ru.chousik.is.dto.request.CoordinatesAddRequest;
-import ru.chousik.is.dto.request.CoordinatesUpdateRequest;
-import ru.chousik.is.dto.response.CoordinatesResponse;
-import ru.chousik.is.exception.BadRequestException;
+import ru.chousik.is.api.model.CoordinatesAddRequest;
+import ru.chousik.is.api.model.CoordinatesResponse;
+import ru.chousik.is.api.model.CoordinatesUpdateRequest;
 import ru.chousik.is.service.CoordinatesService;
 
 import java.util.List;
-import jakarta.validation.constraints.NotNull;
 
 @RestController
 @RequestMapping
 @RequiredArgsConstructor
-public class CoordinatesController implements CoordinatesApi {
-
-    private static final int DEFAULT_PAGE = 0;
-    private static final int DEFAULT_SIZE = 20;
+public class CoordinatesController extends PageHelper implements CoordinatesApi {
 
     private final CoordinatesService coordinatesService;
 
     @Override
     public ResponseEntity<List<CoordinatesResponse>> apiV1CoordinatesByIdsGet(
-            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids) {
+            @RequestParam(value = "ids", required = true) List<Long> ids) {
         return ResponseEntity.ok(coordinatesService.getByIds(ids));
     }
 
     @Override
     public ResponseEntity<Void> apiV1CoordinatesDelete(
-            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids) {
+            @RequestParam(value = "ids", required = true) List<Long> ids) {
         coordinatesService.deleteMany(ids);
         return ResponseEntity.noContent().build();
     }
@@ -60,7 +53,7 @@ public class CoordinatesController implements CoordinatesApi {
 
     @Override
     public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdDelete(
-            @NotNull @PathVariable("id") Long id) {
+            @PathVariable("id") Long id) {
         CoordinatesResponse response = coordinatesService.delete(id);
         if (response == null) {
             return ResponseEntity.noContent().build();
@@ -70,52 +63,28 @@ public class CoordinatesController implements CoordinatesApi {
 
     @Override
     public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdGet(
-            @NotNull @PathVariable("id") Long id) {
+            @PathVariable("id") Long id) {
         return ResponseEntity.ok(coordinatesService.getById(id));
     }
 
     @Override
     public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdPatch(
-            @NotNull @PathVariable("id") Long id,
-            @Valid @RequestBody CoordinatesUpdateRequest coordinatesUpdateRequest) {
+            @PathVariable("id") Long id,
+            @RequestBody CoordinatesUpdateRequest coordinatesUpdateRequest) {
         return ResponseEntity.ok(coordinatesService.update(id, coordinatesUpdateRequest));
     }
 
     @Override
     public ResponseEntity<List<CoordinatesResponse>> apiV1CoordinatesPatch(
-            @NotNull @Valid @RequestParam(value = "ids", required = true) List<Long> ids,
-            @Valid @RequestBody CoordinatesUpdateRequest coordinatesUpdateRequest) {
+            @RequestParam(value = "ids", required = true) List<Long> ids,
+            @RequestBody CoordinatesUpdateRequest coordinatesUpdateRequest) {
         List<CoordinatesResponse> responses = coordinatesService.updateMany(ids, coordinatesUpdateRequest);
         return ResponseEntity.ok(responses);
     }
 
     @Override
     public ResponseEntity<CoordinatesResponse> apiV1CoordinatesPost(
-            @Valid @RequestBody CoordinatesAddRequest coordinatesAddRequest) {
+            @RequestBody CoordinatesAddRequest coordinatesAddRequest) {
         return ResponseEntity.ok(coordinatesService.create(coordinatesAddRequest));
-    }
-
-    private Pageable toPageable(Integer page, Integer size) {
-        int pageNumber = page == null ? DEFAULT_PAGE : page;
-        int pageSize = size == null ? DEFAULT_SIZE : size;
-        return PageRequest.of(pageNumber, pageSize);
-    }
-
-    private String resolveSortField(String sortBy, String sort) {
-        if (sortBy != null && !sortBy.isBlank()) {
-            return sortBy;
-        }
-        return (sort != null && !sort.isBlank()) ? sort : null;
-    }
-
-    private Sort.Direction resolveDirection(String direction) {
-        if (direction == null || direction.isBlank()) {
-            return Sort.Direction.ASC;
-        }
-        try {
-            return Sort.Direction.fromString(direction);
-        } catch (IllegalArgumentException ex) {
-            throw new BadRequestException("Некорректное направление сортировки '%s'".formatted(direction));
-        }
     }
 }

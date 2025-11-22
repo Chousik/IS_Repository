@@ -1,29 +1,32 @@
 package ru.chousik.is.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import ru.chousik.is.api.model.CoordinatesAddRequest;
+import ru.chousik.is.api.model.LocationAddRequest;
+import ru.chousik.is.api.model.PersonAddRequest;
+import ru.chousik.is.api.model.StudyGroupAddRequest;
+import ru.chousik.is.api.model.StudyGroupExpelledTotalResponse;
+import ru.chousik.is.api.model.StudyGroupResponse;
+import ru.chousik.is.api.model.StudyGroupShouldBeExpelledGroupResponse;
+import ru.chousik.is.api.model.StudyGroupUpdateRequest;
 import ru.chousik.is.dto.mapper.CoordinatesMapper;
 import ru.chousik.is.dto.mapper.LocationMapper;
 import ru.chousik.is.dto.mapper.StudyGroupMapper;
-import ru.chousik.is.dto.request.CoordinatesAddRequest;
-import ru.chousik.is.dto.request.LocationAddRequest;
-import ru.chousik.is.dto.request.PersonAddRequest;
-import ru.chousik.is.dto.request.StudyGroupAddRequest;
-import ru.chousik.is.dto.request.StudyGroupUpdateRequest;
-import ru.chousik.is.dto.response.StudyGroupExpelledTotalResponse;
-import ru.chousik.is.dto.response.StudyGroupResponse;
-import ru.chousik.is.dto.response.StudyGroupShouldBeExpelledGroupResponse;
 import ru.chousik.is.entity.Coordinates;
+import ru.chousik.is.entity.FormOfEducation;
 import ru.chousik.is.entity.Location;
 import ru.chousik.is.entity.Person;
-import ru.chousik.is.entity.StudyGroup;
 import ru.chousik.is.entity.Semester;
+import ru.chousik.is.entity.StudyGroup;
 import ru.chousik.is.event.EntityChangeNotifier;
 import ru.chousik.is.exception.BadRequestException;
 import ru.chousik.is.exception.NotFoundException;
@@ -33,10 +36,17 @@ import ru.chousik.is.repository.PersonRepository;
 import ru.chousik.is.repository.StudyGroupRepository;
 import ru.chousik.is.repository.StudyGroupRepository.ShouldBeExpelledGroupProjection;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -52,6 +62,19 @@ public class StudyGroupService {
     private final CoordinatesMapper coordinatesMapper;
     private final LocationMapper locationMapper;
     private final EntityChangeNotifier entityChangeNotifier;
+    private final ConcurrentMap<String, Object> nameLocks = new ConcurrentHashMap<>();
+
+    private static final Map<FormOfEducation, Long> MIN_STUDENTS = Map.of(
+            FormOfEducation.DISTANCE_EDUCATION, 20L,
+            FormOfEducation.EVENING_CLASSES, 6L,
+            FormOfEducation.FULL_TIME_EDUCATION, 10L
+    );
+
+    private static final Map<FormOfEducation, Long> MAX_STUDENTS = Map.of(
+            FormOfEducation.DISTANCE_EDUCATION, 100L,
+            FormOfEducation.EVENING_CLASSES, 25L,
+            FormOfEducation.FULL_TIME_EDUCATION, 30L
+    );
 
     public Page<StudyGroupResponse> getAll(Pageable pageable, String sortBy, Sort.Direction direction) {
         Pageable sortedPageable = applySorting(pageable, sortBy, direction);
@@ -75,38 +98,52 @@ public class StudyGroupService {
                 .toList();
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public StudyGroupResponse create(StudyGroupAddRequest request) {
-        validateCoordinatesInput(request.coordinatesId(), request.coordinates());
-        validateGroupAdminInput(request.groupAdminId(), request.groupAdmin(), false);
+        if (request == null) {
+            throw new BadRequestException("Тело запроса отсутствует");
+        }
+        validateCoordinatesInput(request.getCoordinatesId(), request.getCoordinates());
+        validateGroupAdminInput(request.getGroupAdminId(), request.getGroupAdmin(), false);
+        validateCourseValue(request.getCourse());
+        validateStudentsBounds(request.getFormOfEducation(), request.getStudentsCount(), false);
 
-        Coordinates coordinates = resolveCoordinatesForCreate(request.coordinatesId(), request.coordinates());
+        Coordinates coordinates = resolveCoordinatesForCreate(request.getCoordinatesId(), request.getCoordinates());
         if (coordinates == null) {
             throw new BadRequestException("Координаты обязательны для создания учебной группы");
         }
 
-        Person groupAdmin = resolveGroupAdminForCreate(request.groupAdminId(), request.groupAdmin());
+        Person groupAdmin = resolveGroupAdminForCreate(request.getGroupAdminId(), request.getGroupAdmin());
+        ensureGroupAdminAvailable(groupAdmin, null);
 
         StudyGroup studyGroup = StudyGroup.builder()
-                .name(request.name())
+                .name("")
                 .coordinates(coordinates)
-                .studentsCount(request.studentsCount())
-                .expelledStudents(request.expelledStudents())
-                .transferredStudents(request.transferredStudents())
-                .formOfEducation(request.formOfEducation())
-                .shouldBeExpelled(request.shouldBeExpelled())
-                .averageMark(request.averageMark())
-                .semesterEnum(request.semesterEnum())
+                .studentsCount(request.getStudentsCount())
+                .expelledStudents(request.getExpelledStudents())
+                .course(request.getCourse())
+                .transferredStudents(request.getTransferredStudents())
+                .formOfEducation(request.getFormOfEducation())
+                .shouldBeExpelled(request.getShouldBeExpelled())
+                .averageMark(request.getAverageMark())
+                .semesterEnum(request.getSemesterEnum())
                 .groupAdmin(groupAdmin)
                 .build();
 
-        StudyGroup saved = studyGroupRepository.save(studyGroup);
+        assignGeneratedName(studyGroup, true);
+
+        StudyGroup saved;
+        try {
+            saved = studyGroupRepository.save(studyGroup);
+        } catch (DataIntegrityViolationException ex) {
+            throw translateConstraintViolation(ex);
+        }
         StudyGroupResponse response = studyGroupMapper.toStudyGroupResponse(saved);
         entityChangeNotifier.publish("STUDY_GROUP", "CREATED", response);
         return response;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public StudyGroupResponse update(Long id, StudyGroupUpdateRequest request) {
         validateUpdateRequest(request);
 
@@ -115,13 +152,22 @@ public class StudyGroupService {
 
         applyUpdates(studyGroup, request);
 
-        StudyGroup saved = studyGroupRepository.save(studyGroup);
+        StudyGroup saved;
+        try {
+            saved = studyGroupRepository.saveAndFlush(studyGroup);
+        } catch (DataIntegrityViolationException ex) {
+            throw translateConstraintViolation(ex);
+        }
         StudyGroupResponse response = studyGroupMapper.toStudyGroupResponse(saved);
-        entityChangeNotifier.publish("STUDY_GROUP", "UPDATED", response);
+        if (tryDissolveGroupIfNeeded(saved)) {
+            entityChangeNotifier.publish("STUDY_GROUP", "DELETED", response);
+        } else {
+            entityChangeNotifier.publish("STUDY_GROUP", "UPDATED", response);
+        }
         return response;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public List<StudyGroupResponse> updateMany(List<Long> ids, StudyGroupUpdateRequest request) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
@@ -132,26 +178,39 @@ public class StudyGroupService {
         validateAllIdsPresent(ids, studyGroups);
 
         Coordinates resolvedCoordinates = null;
-        if (request.coordinatesId() != null) {
-            resolvedCoordinates = resolveExistingCoordinates(request.coordinatesId());
+        if (request.getCoordinatesId() != null) {
+            resolvedCoordinates = resolveExistingCoordinates(request.getCoordinatesId());
         }
 
         Person resolvedAdmin = null;
-        if (request.groupAdminId() != null) {
-            resolvedAdmin = resolveExistingPerson(request.groupAdminId());
+        if (request.getGroupAdminId() != null) {
+            resolvedAdmin = resolveExistingPerson(request.getGroupAdminId());
         }
 
         for (StudyGroup studyGroup : studyGroups) {
             applyUpdates(studyGroup, request, resolvedCoordinates, resolvedAdmin);
         }
 
-        List<StudyGroup> saved = studyGroupRepository.saveAllAndFlush(studyGroups);
-        List<StudyGroupResponse> responses = saved.stream().map(studyGroupMapper::toStudyGroupResponse).toList();
-        responses.forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "UPDATED", response));
+        List<StudyGroup> saved;
+        try {
+            saved = studyGroupRepository.saveAllAndFlush(studyGroups);
+        } catch (DataIntegrityViolationException ex) {
+            throw translateConstraintViolation(ex);
+        }
+        List<StudyGroupResponse> responses = new ArrayList<>();
+        for (StudyGroup updated : saved) {
+            StudyGroupResponse response = studyGroupMapper.toStudyGroupResponse(updated);
+            responses.add(response);
+            if (tryDissolveGroupIfNeeded(updated)) {
+                entityChangeNotifier.publish("STUDY_GROUP", "DELETED", response);
+            } else {
+                entityChangeNotifier.publish("STUDY_GROUP", "UPDATED", response);
+            }
+        }
         return responses;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public StudyGroupResponse delete(Long id) {
         StudyGroup studyGroup = studyGroupRepository.findById(id).orElse(null);
         if (studyGroup == null) {
@@ -169,7 +228,7 @@ public class StudyGroupService {
         return response;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public void deleteMany(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return;
@@ -197,7 +256,7 @@ public class StudyGroupService {
         responses.forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "DELETED", response));
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public long deleteAllBySemester(Semester semesterEnum) {
         if (semesterEnum == null) {
             throw new BadRequestException("Не указан semesterEnum");
@@ -228,7 +287,7 @@ public class StudyGroupService {
         return responses.size();
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public StudyGroupResponse deleteOneBySemester(Semester semesterEnum) {
         if (semesterEnum == null) {
             throw new BadRequestException("Не указан semesterEnum");
@@ -251,78 +310,101 @@ public class StudyGroupService {
     public List<StudyGroupShouldBeExpelledGroupResponse> groupByShouldBeExpelled() {
         List<ShouldBeExpelledGroupProjection> stats = studyGroupRepository.countGroupedByShouldBeExpelled();
         return stats.stream()
-                .map(item -> new StudyGroupShouldBeExpelledGroupResponse(item.getShouldBeExpelled(), item.getTotal()))
+                .map(item -> new StudyGroupShouldBeExpelledGroupResponse()
+                        .shouldBeExpelled(item.getShouldBeExpelled())
+                        .count(item.getTotal()))
                 .toList();
     }
 
     public StudyGroupExpelledTotalResponse totalExpelledStudents() {
         Long total = studyGroupRepository.sumExpelledStudents();
-        return new StudyGroupExpelledTotalResponse(total == null ? 0 : total);
+        return new StudyGroupExpelledTotalResponse()
+                .totalExpelledStudents(total == null ? 0 : total);
+    }
+
+    private RuntimeException translateConstraintViolation(DataIntegrityViolationException ex) {
+        String message = Optional.ofNullable(ex.getMostSpecificCause())
+                .map(Throwable::getMessage)
+                .orElse("");
+        if (message.contains("uq_coordinates_xy")) {
+            return new BadRequestException("Координаты с такими значениями уже используются", ex);
+        }
+        if (message.contains("uq_study_group_admin")) {
+            return new BadRequestException("Администратор уже закреплён за другой учебной группой", ex);
+        }
+        return new BadRequestException("Нарушено ограничение уникальности учебной группы", ex);
     }
 
     private void applyUpdates(StudyGroup studyGroup, StudyGroupUpdateRequest request) {
         applyUpdates(studyGroup, request,
-                request.coordinatesId() != null ? resolveExistingCoordinates(request.coordinatesId()) : null,
-                request.groupAdminId() != null ? resolveExistingPerson(request.groupAdminId()) : null);
+                request.getCoordinatesId() != null ? resolveExistingCoordinates(request.getCoordinatesId()) : null,
+                request.getGroupAdminId() != null ? resolveExistingPerson(request.getGroupAdminId()) : null);
     }
 
     private void applyUpdates(StudyGroup studyGroup, StudyGroupUpdateRequest request,
                               Coordinates coordinatesFromId, Person groupAdminFromId) {
-        if (request.name() != null) {
-            if (request.name().isBlank()) {
-                throw new BadRequestException("Поле name не может быть пустым");
-            }
-            studyGroup.setName(request.name());
+        boolean formChanged = false;
+        boolean courseChanged = false;
+
+        if (request.getFormOfEducation() != null) {
+            formChanged = !request.getFormOfEducation().equals(studyGroup.getFormOfEducation());
+            studyGroup.setFormOfEducation(request.getFormOfEducation());
         }
 
-        if (request.studentsCount() != null) {
-            studyGroup.setStudentsCount(request.studentsCount());
-        } else if (Boolean.TRUE.equals(request.clearStudentsCount())) {
-            studyGroup.setStudentsCount(null);
+        if (request.getCourse() != null) {
+            validateCourseValue(request.getCourse());
+            courseChanged = !request.getCourse().equals(studyGroup.getCourse());
+            studyGroup.setCourse(request.getCourse());
         }
 
-        if (request.expelledStudents() != null) {
-            studyGroup.setExpelledStudents(request.expelledStudents());
+        if (request.getStudentsCount() != null) {
+            studyGroup.setStudentsCount(request.getStudentsCount());
         }
 
-        if (request.transferredStudents() != null) {
-            studyGroup.setTransferredStudents(request.transferredStudents());
+        if (request.getExpelledStudents() != null) {
+            studyGroup.setExpelledStudents(request.getExpelledStudents());
         }
 
-        if (request.shouldBeExpelled() != null) {
-            studyGroup.setShouldBeExpelled(request.shouldBeExpelled());
+        if (request.getTransferredStudents() != null) {
+            studyGroup.setTransferredStudents(request.getTransferredStudents());
         }
 
-        if (request.averageMark() != null) {
-            studyGroup.setAverageMark(request.averageMark());
-        } else if (Boolean.TRUE.equals(request.clearAverageMark())) {
+        if (request.getShouldBeExpelled() != null) {
+            studyGroup.setShouldBeExpelled(request.getShouldBeExpelled());
+        }
+
+        if (request.getAverageMark() != null) {
+            studyGroup.setAverageMark(request.getAverageMark());
+        } else if (Boolean.TRUE.equals(request.getClearAverageMark())) {
             studyGroup.setAverageMark(null);
         }
 
-        if (Boolean.TRUE.equals(request.clearFormOfEducation())) {
-            studyGroup.setFormOfEducation(null);
-        } else if (request.formOfEducation() != null) {
-            studyGroup.setFormOfEducation(request.formOfEducation());
+        if (request.getSemesterEnum() != null) {
+            studyGroup.setSemesterEnum(request.getSemesterEnum());
         }
 
-        if (request.semesterEnum() != null) {
-            studyGroup.setSemesterEnum(request.semesterEnum());
-        }
-
-        if (request.coordinatesId() != null) {
-            Coordinates coordinates = coordinatesFromId != null ? coordinatesFromId : resolveExistingCoordinates(request.coordinatesId());
+        if (request.getCoordinatesId() != null) {
+            Coordinates coordinates = coordinatesFromId != null ? coordinatesFromId : resolveExistingCoordinates(request.getCoordinatesId());
             studyGroup.setCoordinates(coordinates);
-        } else if (request.coordinates() != null) {
-            studyGroup.setCoordinates(coordinatesMapper.toEntity(request.coordinates()));
+        } else if (request.getCoordinates() != null) {
+            Coordinates coordinates = mapNewCoordinates(request.getCoordinates());
+            studyGroup.setCoordinates(coordinates);
         }
 
-        if (Boolean.TRUE.equals(request.removeGroupAdmin())) {
+        if (Boolean.TRUE.equals(request.getRemoveGroupAdmin())) {
             studyGroup.setGroupAdmin(null);
-        } else if (request.groupAdminId() != null) {
-            Person admin = groupAdminFromId != null ? groupAdminFromId : resolveExistingPerson(request.groupAdminId());
+        } else if (request.getGroupAdminId() != null) {
+            Person admin = groupAdminFromId != null ? groupAdminFromId : resolveExistingPerson(request.getGroupAdminId());
+            ensureGroupAdminAvailable(admin, studyGroup.getId());
             studyGroup.setGroupAdmin(admin);
-        } else if (request.groupAdmin() != null) {
-            studyGroup.setGroupAdmin(buildPersonEntity(request.groupAdmin()));
+        } else if (request.getGroupAdmin() != null) {
+            studyGroup.setGroupAdmin(buildPersonEntity(request.getGroupAdmin()));
+        }
+
+        validateStudentsBounds(studyGroup.getFormOfEducation(), studyGroup.getStudentsCount(), true);
+
+        if (formChanged || courseChanged) {
+            assignGeneratedName(studyGroup, true);
         }
     }
 
@@ -331,7 +413,7 @@ public class StudyGroupService {
             return resolveExistingCoordinates(coordinatesId);
         }
         if (coordinatesDto != null) {
-            return coordinatesMapper.toEntity(coordinatesDto);
+            return mapNewCoordinates(coordinatesDto);
         }
         return null;
     }
@@ -351,22 +433,50 @@ public class StudyGroupService {
         return null;
     }
 
+    private Coordinates mapNewCoordinates(CoordinatesAddRequest coordinatesDto) {
+        Coordinates coordinates = coordinatesMapper.toEntity(coordinatesDto);
+        ensureCoordinatesUnique(coordinates);
+        return coordinates;
+    }
+
+    private void ensureCoordinatesUnique(Coordinates coordinates) {
+        if (coordinates == null) {
+            return;
+        }
+        boolean exists = coordinatesRepository.findByXAndY(coordinates.getX(), coordinates.getY()).isPresent();
+        if (exists) {
+            throw new BadRequestException("Координаты с такими значениями уже существуют. Выберите существующую запись по идентификатору или укажите уникальные значения");
+        }
+    }
+
     private Person resolveExistingPerson(Long personId) {
         return personRepository.findById(personId)
                 .orElseThrow(() -> new NotFoundException("Человек с идентификатором %d не найден".formatted(personId)));
     }
 
+    private void ensureGroupAdminAvailable(Person person, Long currentGroupId) {
+        if (person == null || person.getId() == null) {
+            return;
+        }
+        boolean alreadyAssigned = currentGroupId == null
+                ? studyGroupRepository.existsByGroupAdminId(person.getId())
+                : studyGroupRepository.existsByGroupAdminIdAndIdNot(person.getId(), currentGroupId);
+        if (alreadyAssigned) {
+            throw new BadRequestException("Администратор уже закреплён за другой учебной группой");
+        }
+    }
+
     private Person buildPersonEntity(PersonAddRequest request) {
-        validatePersonLocationInput(request.locationId(), request.location());
-        Location location = resolveLocationForPerson(request.locationId(), request.location());
+        validatePersonLocationInput(request.getLocationId(), request.getLocation());
+        Location location = resolveLocationForPerson(request.getLocationId(), request.getLocation());
         Person person = Person.builder()
-                .name(request.name())
-                .eyeColor(request.eyeColor())
-                .hairColor(request.hairColor())
+                .name(request.getName())
+                .eyeColor(request.getEyeColor())
+                .hairColor(request.getHairColor())
                 .location(location)
-                .height(request.height())
-                .weight(request.weight())
-                .nationality(request.nationality())
+                .height(request.getHeight())
+                .weight(request.getWeight())
+                .nationality(request.getNationality())
                 .build();
         return person;
     }
@@ -387,45 +497,35 @@ public class StudyGroupService {
             throw new BadRequestException("Тело запроса отсутствует");
         }
 
-        boolean hasAnyField = request.name() != null
-                || request.coordinatesId() != null
-                || request.coordinates() != null
-                || request.studentsCount() != null
-                || Boolean.TRUE.equals(request.clearStudentsCount())
-                || request.expelledStudents() != null
-                || request.transferredStudents() != null
-                || request.formOfEducation() != null
-                || Boolean.TRUE.equals(request.clearFormOfEducation())
-                || request.shouldBeExpelled() != null
-                || request.averageMark() != null
-                || Boolean.TRUE.equals(request.clearAverageMark())
-                || request.semesterEnum() != null
-                || request.groupAdminId() != null
-                || request.groupAdmin() != null
-                || Boolean.TRUE.equals(request.removeGroupAdmin());
+        boolean hasAnyField = request.getCoordinatesId() != null
+                || request.getCoordinates() != null
+                || request.getStudentsCount() != null
+                || request.getExpelledStudents() != null
+                || request.getTransferredStudents() != null
+                || request.getFormOfEducation() != null
+                || request.getCourse() != null
+                || request.getShouldBeExpelled() != null
+                || request.getAverageMark() != null
+                || Boolean.TRUE.equals(request.getClearAverageMark())
+                || request.getSemesterEnum() != null
+                || request.getGroupAdminId() != null
+                || request.getGroupAdmin() != null
+                || Boolean.TRUE.equals(request.getRemoveGroupAdmin());
 
         if (!hasAnyField) {
             throw new BadRequestException("Не переданы поля для обновления учебной группы");
         }
 
-        if (request.name() != null && request.name().isBlank()) {
-            throw new BadRequestException("Поле name не может быть пустым");
-        }
-
-        if (request.clearStudentsCount() != null && request.studentsCount() != null && request.clearStudentsCount()) {
-            throw new BadRequestException("Нельзя одновременно задавать и очищать поле studentsCount");
-        }
-
-        if (request.clearAverageMark() != null && request.averageMark() != null && request.clearAverageMark()) {
+        if (request.getClearAverageMark() != null && request.getAverageMark() != null && request.getClearAverageMark()) {
             throw new BadRequestException("Нельзя одновременно задавать и очищать поле averageMark");
         }
 
-        if (request.clearFormOfEducation() != null && request.formOfEducation() != null && request.clearFormOfEducation()) {
-            throw new BadRequestException("Нельзя одновременно задавать и очищать поле formOfEducation");
+        if (request.getCourse() != null) {
+            validateCourseValue(request.getCourse());
         }
 
-        validateCoordinatesInput(request.coordinatesId(), request.coordinates());
-        validateGroupAdminInput(request.groupAdminId(), request.groupAdmin(), Boolean.TRUE.equals(request.removeGroupAdmin()));
+        validateCoordinatesInput(request.getCoordinatesId(), request.getCoordinates());
+        validateGroupAdminInput(request.getGroupAdminId(), request.getGroupAdmin(), Boolean.TRUE.equals(request.getRemoveGroupAdmin()));
     }
 
     private void validateCoordinatesInput(Long coordinatesId, CoordinatesAddRequest coordinatesDto) {
@@ -449,6 +549,32 @@ public class StudyGroupService {
         }
     }
 
+    private void validateCourseValue(Integer course) {
+        if (course == null) {
+            throw new BadRequestException("Поле course не может быть пустым");
+        }
+        if (course < 1) {
+            throw new BadRequestException("Курс должен быть положительным числом");
+        }
+    }
+
+    private void validateStudentsBounds(FormOfEducation formOfEducation, Long studentsCount, boolean allowBelowMinimum) {
+        if (formOfEducation == null) {
+            throw new BadRequestException("Поле formOfEducation обязательно для применения ограничений");
+        }
+        if (studentsCount == null) {
+            throw new BadRequestException("Поле studentsCount не может быть пустым");
+        }
+        Long min = MIN_STUDENTS.get(formOfEducation);
+        Long max = MAX_STUDENTS.get(formOfEducation);
+        if (min != null && !allowBelowMinimum && studentsCount < min) {
+            throw new BadRequestException("Количество студентов не может быть меньше %d для формы %s".formatted(min, formOfEducation));
+        }
+        if (max != null && studentsCount > max) {
+            throw new BadRequestException("Количество студентов не может превышать %d для формы %s".formatted(max, formOfEducation));
+        }
+    }
+
     private Pageable applySorting(Pageable pageable, String sortBy, Sort.Direction direction) {
         String sortField = Objects.requireNonNullElse(sortBy, "id");
         Sort.Direction sortDirection = direction == null ? Sort.Direction.ASC : direction;
@@ -456,7 +582,7 @@ public class StudyGroupService {
             Sort sort = Sort.by(sortDirection, sortField);
             return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
         } catch (PropertyReferenceException e) {
-            throw new BadRequestException("Неизвестное поле сортировки '%s'".formatted(sortField));
+            throw new BadRequestException("Неизвестное поле сортировки '%s'".formatted(sortField), e);
         }
     }
 
@@ -470,5 +596,199 @@ public class StudyGroupService {
         if (!missing.isEmpty()) {
             throw new NotFoundException("Учебные группы с идентификаторами %s не найдены".formatted(missing));
         }
+    }
+
+    private boolean tryDissolveGroupIfNeeded(StudyGroup studyGroup) {
+        Long studentsCount = studyGroup.getStudentsCount();
+        Long minAllowed = MIN_STUDENTS.get(studyGroup.getFormOfEducation());
+        if (studentsCount == null || minAllowed == null || studentsCount >= minAllowed) {
+            return false;
+        }
+
+        List<FormOfEducation> allowedTargets = resolveAllowedTargetForms(studyGroup.getFormOfEducation());
+        if (allowedTargets.isEmpty()) {
+            return false;
+        }
+
+        List<StudyGroup> candidates = studyGroupRepository.findByCourseAndFormOfEducationIn(studyGroup.getCourse(), allowedTargets).stream()
+                .filter(candidate -> !Objects.equals(candidate.getId(), studyGroup.getId()))
+                .sorted(Comparator.comparingLong(this::availableCapacity).reversed())
+                .toList();
+
+        long remaining = studentsCount;
+        List<StudyGroup> changedGroups = new ArrayList<>();
+        for (StudyGroup candidate : candidates) {
+            long capacity = availableCapacity(candidate);
+            if (capacity <= 0) {
+                continue;
+            }
+            long delta = Math.min(capacity, remaining);
+            candidate.setStudentsCount(candidate.getStudentsCount() + delta);
+            remaining -= delta;
+            changedGroups.add(candidate);
+            if (remaining == 0) {
+                break;
+            }
+        }
+
+        if (remaining > 0) {
+            if (candidates.isEmpty()) {
+                return false;
+            }
+            StudyGroup overflowTarget = candidates.get(0);
+            overflowTarget.setStudentsCount(overflowTarget.getStudentsCount() + remaining);
+            if (!changedGroups.contains(overflowTarget)) {
+                changedGroups.add(overflowTarget);
+            }
+            remaining = 0;
+        }
+
+        List<StudyGroup> spawnedGroups = new ArrayList<>();
+        for (StudyGroup changed : changedGroups) {
+            spawnedGroups.addAll(splitOverloadedGroupIfNeeded(changed));
+        }
+
+        studyGroupRepository.saveAll(changedGroups);
+        studyGroupRepository.flush();
+        changedGroups.stream()
+                .map(studyGroupMapper::toStudyGroupResponse)
+                .forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "UPDATED", response));
+
+        if (!spawnedGroups.isEmpty()) {
+            List<StudyGroupResponse> createdResponses = new ArrayList<>();
+            for (StudyGroup splitGroup : spawnedGroups) {
+                assignGeneratedName(splitGroup, true);
+                StudyGroup persisted = studyGroupRepository.saveAndFlush(splitGroup);
+                createdResponses.add(studyGroupMapper.toStudyGroupResponse(persisted));
+            }
+            createdResponses.forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "CREATED", response));
+        }
+
+        Long coordinateId = studyGroup.getCoordinates() != null ? studyGroup.getCoordinates().getId() : null;
+        studyGroupRepository.delete(studyGroup);
+        studyGroupRepository.flush();
+        if (coordinateId != null && !studyGroupRepository.existsByCoordinatesId(coordinateId)) {
+            coordinatesRepository.deleteById(coordinateId);
+        }
+        return true;
+    }
+
+    private List<StudyGroup> splitOverloadedGroupIfNeeded(StudyGroup group) {
+        Long max = MAX_STUDENTS.get(group.getFormOfEducation());
+        Long min = MIN_STUDENTS.get(group.getFormOfEducation());
+        Long total = group.getStudentsCount();
+        if (max == null || total == null || total <= max) {
+            return List.of();
+        }
+
+        long resolvedMin = min == null ? 1 : min;
+        List<Long> partitions = partitionStudents(total, resolvedMin, max);
+        Iterator<Long> iterator = partitions.iterator();
+        group.setStudentsCount(iterator.next());
+
+        List<StudyGroup> splitGroups = new ArrayList<>();
+        int offset = 1;
+        while (iterator.hasNext()) {
+            splitGroups.add(cloneGroupForSplit(group, iterator.next(), offset++));
+        }
+        return splitGroups;
+    }
+
+    private StudyGroup cloneGroupForSplit(StudyGroup template, long studentsCount, int offset) {
+        Coordinates coordinates = cloneCoordinates(template.getCoordinates(), offset);
+        StudyGroup clone = StudyGroup.builder()
+                .name("")
+                .coordinates(coordinates)
+                .studentsCount(studentsCount)
+                .expelledStudents(template.getExpelledStudents())
+                .course(template.getCourse())
+                .transferredStudents(template.getTransferredStudents())
+                .formOfEducation(template.getFormOfEducation())
+                .shouldBeExpelled(template.getShouldBeExpelled())
+                .averageMark(template.getAverageMark())
+                .semesterEnum(template.getSemesterEnum())
+                .groupAdmin(null)
+                .build();
+        return clone;
+    }
+
+    private List<Long> partitionStudents(long total, long min, long max) {
+        List<Long> parts = new ArrayList<>();
+        long remaining = total;
+        while (remaining > 0) {
+            long groupsLeft = (long) Math.ceil((double) remaining / (double) max);
+            long minReserve = min * (Math.max(0, groupsLeft - 1));
+            long candidate = Math.min(max, remaining - minReserve);
+            if (candidate < min && remaining > 0) {
+                candidate = Math.min(remaining, min);
+            }
+            if (candidate <= 0) {
+                candidate = remaining;
+            }
+            parts.add(candidate);
+            remaining -= candidate;
+        }
+        return parts;
+    }
+
+    private Coordinates cloneCoordinates(Coordinates source, int offset) {
+        if (source == null) {
+            throw new BadRequestException("Невозможно клонировать координаты для разделения группы: запись отсутствует");
+        }
+        long candidateX = source.getX() + offset;
+        Float baseY = source.getY();
+        while (coordinatesRepository.findByXAndY(candidateX, baseY).isPresent()) {
+            candidateX++;
+        }
+        return Coordinates.builder()
+                .x(candidateX)
+                .y(baseY)
+                .build();
+    }
+
+    private long availableCapacity(StudyGroup studyGroup) {
+        Long max = MAX_STUDENTS.get(studyGroup.getFormOfEducation());
+        if (max == null || studyGroup.getStudentsCount() == null) {
+            return 0;
+        }
+        return Math.max(0, max - studyGroup.getStudentsCount());
+    }
+
+    private List<FormOfEducation> resolveAllowedTargetForms(FormOfEducation source) {
+        return switch (source) {
+            case FULL_TIME_EDUCATION -> List.of(FormOfEducation.FULL_TIME_EDUCATION,
+                    FormOfEducation.DISTANCE_EDUCATION,
+                    FormOfEducation.EVENING_CLASSES);
+            case EVENING_CLASSES -> List.of(FormOfEducation.FULL_TIME_EDUCATION,
+                    FormOfEducation.DISTANCE_EDUCATION);
+            case DISTANCE_EDUCATION -> List.of(FormOfEducation.DISTANCE_EDUCATION);
+        };
+    }
+
+    private void assignGeneratedName(StudyGroup studyGroup, boolean regenerateSequence) {
+        FormOfEducation form = studyGroup.getFormOfEducation();
+        int course = studyGroup.getCourse();
+        Object lock = nameLocks.computeIfAbsent(nameLockKey(form, course), key -> new Object());
+        synchronized (lock) {
+            if (regenerateSequence || studyGroup.getSequenceNumber() <= 0) {
+                int nextSequence = studyGroupRepository.findMaxSequenceNumber(form, course) + 1;
+                studyGroup.setSequenceNumber(nextSequence);
+            }
+            String prefix = resolveFormPrefix(form);
+            String suffix = String.format("%02d", studyGroup.getSequenceNumber());
+            studyGroup.setName("%s-%d-%s".formatted(prefix, course, suffix));
+        }
+    }
+
+    private String nameLockKey(FormOfEducation form, int course) {
+        return form.name() + "-" + course;
+    }
+
+    private String resolveFormPrefix(FormOfEducation form) {
+        return switch (form) {
+            case DISTANCE_EDUCATION -> "DE";
+            case FULL_TIME_EDUCATION -> "FTE";
+            case EVENING_CLASSES -> "EV";
+        };
     }
 }

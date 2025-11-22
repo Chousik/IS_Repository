@@ -7,12 +7,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.stereotype.Service;
+import ru.chousik.is.api.model.LocationAddRequest;
+import ru.chousik.is.api.model.PersonAddRequest;
+import ru.chousik.is.api.model.PersonResponse;
+import ru.chousik.is.api.model.PersonUpdateRequest;
 import ru.chousik.is.dto.mapper.LocationMapper;
 import ru.chousik.is.dto.mapper.PersonMapper;
-import ru.chousik.is.dto.request.LocationAddRequest;
-import ru.chousik.is.dto.request.PersonAddRequest;
-import ru.chousik.is.dto.request.PersonUpdateRequest;
-import ru.chousik.is.dto.response.PersonResponse;
 import ru.chousik.is.entity.Location;
 import ru.chousik.is.entity.Person;
 import ru.chousik.is.event.EntityChangeNotifier;
@@ -60,18 +60,18 @@ public class PersonService {
     }
 
     public PersonResponse create(PersonAddRequest request) {
-        validateLocationInput(request.locationId(), request.location(), false);
+        validateLocationInput(request.getLocationId(), request.getLocation(), false);
 
-        Location resolvedLocation = resolveLocationForCreate(request.locationId(), request.location());
+        Location resolvedLocation = resolveLocationForCreate(request.getLocationId(), request.getLocation());
 
         Person person = Person.builder()
-                .name(request.name())
-                .eyeColor(request.eyeColor())
-                .hairColor(request.hairColor())
+                .name(request.getName())
+                .eyeColor(request.getEyeColor())
+                .hairColor(request.getHairColor())
                 .location(resolvedLocation)
-                .height(request.height())
-                .weight(request.weight())
-                .nationality(request.nationality())
+                .height(request.getHeight())
+                .weight(request.getWeight())
+                .nationality(request.getNationality())
                 .build();
 
         Person saved = personRepository.save(person);
@@ -104,8 +104,8 @@ public class PersonService {
         validateAllIdsPresent(ids, people);
 
         Location referencedLocation = null;
-        if (request.locationId() != null) {
-            referencedLocation = resolveExistingLocation(request.locationId());
+        if (request.getLocationId() != null) {
+            referencedLocation = resolveExistingLocation(request.getLocationId());
         }
 
         for (Person person : people) {
@@ -144,49 +144,49 @@ public class PersonService {
     private record DeletedPayload(Long id) {}
 
     private void applyUpdates(Person person, PersonUpdateRequest request) {
-        applyUpdates(person, request, request.locationId() != null ? resolveExistingLocation(request.locationId()) : null);
+        applyUpdates(person, request, request.getLocationId() != null ? resolveExistingLocation(request.getLocationId()) : null);
     }
 
     private void applyUpdates(Person person, PersonUpdateRequest request, Location locationFromId) {
-        if (request.name() != null) {
-            if (request.name().isBlank()) {
+        if (request.getName() != null) {
+            if (request.getName().isBlank()) {
                 throw new BadRequestException("Поле name не может быть пустым");
             }
-            person.setName(request.name());
+            person.setName(request.getName());
         }
 
-        if (request.eyeColor() != null) {
-            person.setEyeColor(request.eyeColor());
+        if (request.getEyeColor() != null) {
+            person.setEyeColor(request.getEyeColor());
         }
 
-        if (request.hairColor() != null) {
-            person.setHairColor(request.hairColor());
+        if (request.getHairColor() != null) {
+            person.setHairColor(request.getHairColor());
         }
 
-        if (request.height() != null) {
-            if (request.height() <= 0) {
+        if (request.getHeight() != null) {
+            if (request.getHeight() <= 0) {
                 throw new BadRequestException("Поле height должно быть больше 0");
             }
-            person.setHeight(request.height());
+            person.setHeight(request.getHeight());
         }
 
-        if (request.weight() != null) {
-            if (request.weight() <= 0) {
+        if (request.getWeight() != null) {
+            if (request.getWeight() <= 0) {
                 throw new BadRequestException("Поле weight должно быть больше 0");
             }
-            person.setWeight(request.weight());
+            person.setWeight(request.getWeight());
         }
 
-        if (Boolean.TRUE.equals(request.removeLocation())) {
+        if (Boolean.TRUE.equals(request.getRemoveLocation())) {
             person.setLocation(null);
-        } else if (request.locationId() != null) {
-            person.setLocation(locationFromId != null ? locationFromId : resolveExistingLocation(request.locationId()));
-        } else if (request.location() != null) {
-            person.setLocation(locationMapper.toEntity(request.location()));
+        } else if (request.getLocationId() != null) {
+            person.setLocation(locationFromId != null ? locationFromId : resolveExistingLocation(request.getLocationId()));
+        } else if (request.getLocation() != null) {
+            person.setLocation(locationMapper.toEntity(request.getLocation()));
         }
 
-        if (request.nationality() != null) {
-            person.setNationality(request.nationality());
+        if (request.getNationality() != null) {
+            person.setNationality(request.getNationality());
         }
     }
 
@@ -209,26 +209,26 @@ public class PersonService {
         if (request == null) {
             throw new BadRequestException("Тело запроса отсутствует");
         }
-        boolean hasAnyField = request.name() != null || request.eyeColor() != null || request.hairColor() != null
-                || request.locationId() != null || request.location() != null
-                || Boolean.TRUE.equals(request.removeLocation()) || request.height() != null
-                || request.weight() != null || request.nationality() != null;
+        boolean hasAnyField = request.getName() != null || request.getEyeColor() != null || request.getHairColor() != null
+                || request.getLocationId() != null || request.getLocation() != null
+                || Boolean.TRUE.equals(request.getRemoveLocation()) || request.getHeight() != null
+                || request.getWeight() != null || request.getNationality() != null;
 
         if (!hasAnyField) {
             throw new BadRequestException("Не переданы поля для обновления человека");
         }
 
-        validateLocationInput(request.locationId(), request.location(), Boolean.TRUE.equals(request.removeLocation()));
+        validateLocationInput(request.getLocationId(), request.getLocation(), Boolean.TRUE.equals(request.getRemoveLocation()));
 
-        if (request.name() != null && request.name().isBlank()) {
+        if (request.getName() != null && request.getName().isBlank()) {
             throw new BadRequestException("Поле name не может быть пустым");
         }
 
-        if (request.height() != null && request.height() <= 0) {
+        if (request.getHeight() != null && request.getHeight() <= 0) {
             throw new BadRequestException("Поле height должно быть больше 0");
         }
 
-        if (request.weight() != null && request.weight() <= 0) {
+        if (request.getWeight() != null && request.getWeight() <= 0) {
             throw new BadRequestException("Поле weight должно быть больше 0");
         }
     }
