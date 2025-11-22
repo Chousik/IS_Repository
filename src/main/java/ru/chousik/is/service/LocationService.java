@@ -1,5 +1,10 @@
 package ru.chousik.is.service;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,12 +22,6 @@ import ru.chousik.is.exception.BadRequestException;
 import ru.chousik.is.exception.NotFoundException;
 import ru.chousik.is.repository.LocationRepository;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 @RequiredArgsConstructor
 @Service
 public class LocationService {
@@ -38,8 +37,10 @@ public class LocationService {
     }
 
     public LocationResponse getById(Long id) {
-        Location location = locationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Локация с идентификатором %d не найдена".formatted(id)));
+        Location location = locationRepository
+                .findById(id)
+                .orElseThrow(
+                        () -> new NotFoundException("Локация с идентификатором %d не найдена".formatted(id)));
         return locationMapper.toLocationResponse(location);
     }
 
@@ -48,9 +49,7 @@ public class LocationService {
             return List.of();
         }
         List<Location> locations = locationRepository.findAllById(ids);
-        return locations.stream()
-                .map(locationMapper::toLocationResponse)
-                .toList();
+        return locations.stream().map(locationMapper::toLocationResponse).toList();
     }
 
     public LocationResponse create(LocationAddRequest request) {
@@ -64,8 +63,10 @@ public class LocationService {
     public LocationResponse update(Long id, LocationUpdateRequest request) {
         validateUpdateRequest(request);
 
-        Location location = locationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Локация с идентификатором %d не найдена".formatted(id)));
+        Location location = locationRepository
+                .findById(id)
+                .orElseThrow(
+                        () -> new NotFoundException("Локация с идентификатором %d не найдена".formatted(id)));
 
         locationMapper.updateWithNull(request, location);
         Location saved = locationRepository.save(location);
@@ -88,9 +89,7 @@ public class LocationService {
         }
 
         List<Location> saved = locationRepository.saveAll(locations);
-        List<LocationResponse> responses = saved.stream()
-                .map(locationMapper::toLocationResponse)
-                .toList();
+        List<LocationResponse> responses = saved.stream().map(locationMapper::toLocationResponse).toList();
         responses.forEach(response -> entityChangeNotifier.publish("LOCATION", "UPDATED", response));
         return responses;
     }
@@ -113,14 +112,13 @@ public class LocationService {
         }
         Collection<Location> locations = locationRepository.findAllById(ids);
         validateAllIdsPresent(ids, locations);
-        List<LocationResponse> responses = locations.stream()
-                .map(locationMapper::toLocationResponse)
-                .toList();
+        List<LocationResponse> responses = locations.stream().map(locationMapper::toLocationResponse).toList();
         locationRepository.deleteAll(locations);
         responses.forEach(response -> entityChangeNotifier.publish("LOCATION", "DELETED", response));
     }
 
-    private record DeletedPayload(Long id) {}
+    private record DeletedPayload(Long id) {
+    }
 
     private Pageable applySorting(Pageable pageable, String sortBy, Sort.Direction direction) {
         String sortField = Objects.requireNonNullElse(sortBy, "id");
@@ -134,8 +132,11 @@ public class LocationService {
     }
 
     private void validateUpdateRequest(LocationUpdateRequest request) {
-        if (request == null || (request.getX() == null && request.getY() == null
-                && request.getZ() == null && request.getName() == null)) {
+        if (request == null
+                || (request.getX() == null
+                        && request.getY() == null
+                        && request.getZ() == null
+                        && request.getName() == null)) {
             throw new BadRequestException("Не переданы поля для обновления локации");
         }
         if (request.getName() != null && request.getName().isBlank()) {
@@ -144,12 +145,8 @@ public class LocationService {
     }
 
     private void validateAllIdsPresent(List<Long> requestedIds, Collection<Location> foundEntities) {
-        Set<Long> foundIds = foundEntities.stream()
-                .map(Location::getId)
-                .collect(Collectors.toSet());
-        List<Long> missing = requestedIds.stream()
-                .filter(id -> !foundIds.contains(id))
-                .toList();
+        Set<Long> foundIds = foundEntities.stream().map(Location::getId).collect(Collectors.toSet());
+        List<Long> missing = requestedIds.stream().filter(id -> !foundIds.contains(id)).toList();
         if (!missing.isEmpty()) {
             throw new NotFoundException("Локации с идентификаторами %s не найдены".formatted(missing));
         }

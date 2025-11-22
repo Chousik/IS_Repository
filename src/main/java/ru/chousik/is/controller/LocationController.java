@@ -1,5 +1,6 @@
 package ru.chousik.is.controller;
 
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,8 +17,6 @@ import ru.chousik.is.api.model.LocationAddRequest;
 import ru.chousik.is.api.model.LocationResponse;
 import ru.chousik.is.api.model.LocationUpdateRequest;
 import ru.chousik.is.service.LocationService;
-
-import java.util.List;
 
 @RestController
 @RequestMapping
@@ -41,8 +40,8 @@ public class LocationController extends PageHelper implements LocationsApi {
 
     @Override
     @SuppressWarnings("rawtypes")
-    public ResponseEntity<PagedModel> apiV1LocationsGet(Integer page, Integer size, String sort,
-                                                       String sortBy, String direction) {
+    public ResponseEntity<PagedModel> apiV1LocationsGet(
+            Integer page, Integer size, String sort, String sortBy, String direction) {
         Pageable pageable = toPageable(page, size);
         Sort.Direction sortDirection = resolveDirection(direction);
         String sortField = resolveSortField(sortBy, sort);
@@ -52,8 +51,7 @@ public class LocationController extends PageHelper implements LocationsApi {
     }
 
     @Override
-    public ResponseEntity<LocationResponse> apiV1LocationsIdDelete(
-            @PathVariable("id") Long id) {
+    public ResponseEntity<LocationResponse> apiV1LocationsIdDelete(@PathVariable("id") Long id) {
         LocationResponse response = locationService.delete(id);
         if (response == null) {
             return ResponseEntity.noContent().build();
@@ -62,15 +60,13 @@ public class LocationController extends PageHelper implements LocationsApi {
     }
 
     @Override
-    public ResponseEntity<LocationResponse> apiV1LocationsIdGet(
-            @PathVariable("id") Long id) {
+    public ResponseEntity<LocationResponse> apiV1LocationsIdGet(@PathVariable("id") Long id) {
         return ResponseEntity.ok(locationService.getById(id));
     }
 
     @Override
     public ResponseEntity<LocationResponse> apiV1LocationsIdPatch(
-            @PathVariable("id") Long id,
-            @RequestBody LocationUpdateRequest locationUpdateRequest) {
+            @PathVariable("id") Long id, @RequestBody LocationUpdateRequest locationUpdateRequest) {
         return ResponseEntity.ok(locationService.update(id, locationUpdateRequest));
     }
 

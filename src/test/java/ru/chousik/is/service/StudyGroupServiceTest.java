@@ -1,5 +1,18 @@
 package ru.chousik.is.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -23,22 +36,6 @@ import ru.chousik.is.exception.NotFoundException;
 import ru.chousik.is.repository.CoordinatesRepository;
 import ru.chousik.is.repository.StudyGroupRepository;
 import ru.chousik.is.repository.StudyGroupRepository.ShouldBeExpelledGroupProjection;
-
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-
-import java.time.ZoneOffset;
 
 @ExtendWith(MockitoExtension.class)
 class StudyGroupServiceTest {
@@ -169,23 +166,23 @@ class StudyGroupServiceTest {
         assertEquals(3L, item.getCount());
     }
 
-    @Test
-    void totalExpelledStudentsReturnsZeroWhenRepositoryReturnsNull() {
-        when(studyGroupRepository.sumExpelledStudents()).thenReturn(null);
+  @Test
+  void totalExpelledStudentsReturnsZeroWhenRepositoryReturnsNull() {
+    when(studyGroupRepository.sumExpelledStudents()).thenReturn(null);
 
-        StudyGroupExpelledTotalResponse response = service.totalExpelledStudents();
+    StudyGroupExpelledTotalResponse response = service.totalExpelledStudents();
 
-        assertEquals(0L, response.getTotalExpelledStudents());
-    }
+    assertEquals(0L, response.getTotalExpelledStudents());
+  }
 
-    @Test
-    void totalExpelledStudentsDelegatesToRepository() {
-        when(studyGroupRepository.sumExpelledStudents()).thenReturn(42L);
+  @Test
+  void totalExpelledStudentsDelegatesToRepository() {
+    when(studyGroupRepository.sumExpelledStudents()).thenReturn(42L);
 
-        StudyGroupExpelledTotalResponse response = service.totalExpelledStudents();
+    StudyGroupExpelledTotalResponse response = service.totalExpelledStudents();
 
-        assertEquals(42L, response.getTotalExpelledStudents());
-    }
+    assertEquals(42L, response.getTotalExpelledStudents());
+  }
 
     @Test
     void createThrowsWhenBothCoordinateSourcesProvided() {
@@ -202,7 +199,8 @@ class StudyGroupServiceTest {
                 .semesterEnum(Semester.FIRST);
 
         assertThrows(BadRequestException.class, () -> service.create(request));
-        verifyNoInteractions(studyGroupRepository, coordinatesRepository, studyGroupMapper, entityChangeNotifier);
+        verifyNoInteractions(
+                studyGroupRepository, coordinatesRepository, studyGroupMapper, entityChangeNotifier);
     }
 
     @Test
@@ -219,7 +217,8 @@ class StudyGroupServiceTest {
 
         BadRequestException ex = assertThrows(BadRequestException.class, () -> service.create(request));
         assertTrue(ex.getMessage().contains("Координаты обязательны"));
-        verifyNoInteractions(studyGroupRepository, coordinatesRepository, studyGroupMapper, entityChangeNotifier);
+        verifyNoInteractions(
+                studyGroupRepository, coordinatesRepository, studyGroupMapper, entityChangeNotifier);
     }
 
     private StudyGroup buildGroup(Long id, String name, Semester semester, Coordinates coordinates) {
@@ -252,7 +251,10 @@ class StudyGroupServiceTest {
                 .id(group.getId())
                 .name(group.getName())
                 .coordinates(coordinatesResponse)
-                .creationDate(group.getCreationDate() == null ? null : group.getCreationDate().atOffset(ZoneOffset.UTC))
+                .creationDate(
+                        group.getCreationDate() == null
+                                ? null
+                                : group.getCreationDate().atOffset(ZoneOffset.UTC))
                 .studentsCount(group.getStudentsCount())
                 .expelledStudents(group.getExpelledStudents())
                 .course(group.getCourse())

@@ -1,5 +1,6 @@
 package ru.chousik.is.controller;
 
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,8 +17,6 @@ import ru.chousik.is.api.model.CoordinatesAddRequest;
 import ru.chousik.is.api.model.CoordinatesResponse;
 import ru.chousik.is.api.model.CoordinatesUpdateRequest;
 import ru.chousik.is.service.CoordinatesService;
-
-import java.util.List;
 
 @RestController
 @RequestMapping
@@ -41,8 +40,8 @@ public class CoordinatesController extends PageHelper implements CoordinatesApi 
 
     @Override
     @SuppressWarnings("rawtypes")
-    public ResponseEntity<PagedModel> apiV1CoordinatesGet(Integer page, Integer size, String sort,
-                                                         String sortBy, String direction) {
+    public ResponseEntity<PagedModel> apiV1CoordinatesGet(
+            Integer page, Integer size, String sort, String sortBy, String direction) {
         Pageable pageable = toPageable(page, size);
         Sort.Direction sortDirection = resolveDirection(direction);
         String sortField = resolveSortField(sortBy, sort);
@@ -52,8 +51,7 @@ public class CoordinatesController extends PageHelper implements CoordinatesApi 
     }
 
     @Override
-    public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdDelete(
-            @PathVariable("id") Long id) {
+    public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdDelete(@PathVariable("id") Long id) {
         CoordinatesResponse response = coordinatesService.delete(id);
         if (response == null) {
             return ResponseEntity.noContent().build();
@@ -62,15 +60,13 @@ public class CoordinatesController extends PageHelper implements CoordinatesApi 
     }
 
     @Override
-    public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdGet(
-            @PathVariable("id") Long id) {
+    public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdGet(@PathVariable("id") Long id) {
         return ResponseEntity.ok(coordinatesService.getById(id));
     }
 
     @Override
     public ResponseEntity<CoordinatesResponse> apiV1CoordinatesIdPatch(
-            @PathVariable("id") Long id,
-            @RequestBody CoordinatesUpdateRequest coordinatesUpdateRequest) {
+            @PathVariable("id") Long id, @RequestBody CoordinatesUpdateRequest coordinatesUpdateRequest) {
         return ResponseEntity.ok(coordinatesService.update(id, coordinatesUpdateRequest));
     }
 

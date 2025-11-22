@@ -1,10 +1,27 @@
 package ru.chousik.is.entity;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import lombok.*;
-
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "study_group")
@@ -21,10 +38,10 @@ public class StudyGroup {
 
     @NotBlank
     @Column(nullable = false)
-    private String name; // не null, не пустая строка
+    private String name; // генерируется автоматически, уникальное
 
     @NotNull
-    @OneToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, optional = false)
+    @ManyToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, optional = false)
     @JoinColumn(name = "coordinates_id", nullable = false)
     private Coordinates coordinates; // отдельная сущность
 
@@ -32,8 +49,10 @@ public class StudyGroup {
     @Column(nullable = false, updatable = false)
     private LocalDateTime creationDate; // генерируется автоматически
 
+    @NotNull
     @Positive
-    private Long studentsCount; // >0, может быть null
+    @Column(nullable = false)
+    private Long studentsCount; // >0
 
     @Positive
     @Column(nullable = false)
@@ -41,10 +60,19 @@ public class StudyGroup {
 
     @Positive
     @Column(nullable = false)
+    private int course; // курс обучения
+
+    @Column(nullable = false)
+    private int sequenceNumber; // номер внутри курса+формы для генерации имени
+
+    @Positive
+    @Column(nullable = false)
     private long transferredStudents; // >0
 
+    @NotNull
     @Enumerated(EnumType.STRING)
-    private FormOfEducation formOfEducation; // может быть null
+    @Column(nullable = false)
+    private FormOfEducation formOfEducation; // обязателен для бизнес-ограничений
 
     @Positive
     @Column(nullable = false)
@@ -58,8 +86,9 @@ public class StudyGroup {
     @Column(nullable = false)
     private Semester semesterEnum; // не null
 
-    @ManyToOne(cascade = CascadeType.ALL)
-    private Person groupAdmin; // может быть null
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "group_admin_id", unique = true)
+    private Person groupAdmin; // может быть null, но не повторяется в других группах
 
     @PrePersist
     protected void onCreate() {

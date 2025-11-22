@@ -5,6 +5,9 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.named
 import org.gradle.kotlin.dsl.registering
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.xpath.XPathConstants
+import javax.xml.xpath.XPathFactory
 
 plugins {
     id("java-library")
@@ -12,11 +15,47 @@ plugins {
     id("org.springframework.boot") version "3.5.5"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.openapi.generator") version "7.4.0"
+    id("com.diffplug.spotless") version "6.25.0"
 }
 
 group = "ru.chousik.is"
 version = "0.0.1-SNAPSHOT"
 description = "Generated Java API surface for information-systems backend"
+
+val checkstyleConfigFile = layout.projectDirectory.file("config/checkstyle/checkstyle.xml").asFile
+val checkstyleDocument = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(checkstyleConfigFile)
+val checkstyleXPath = XPathFactory.newInstance().newXPath()
+
+fun readCheckstyleProperty(moduleName: String, propertyName: String): String? {
+    val expression = checkstyleXPath.compile("//module[@name='$moduleName']/property[@name='$propertyName']/@value")
+    val value = expression.evaluate(checkstyleDocument, XPathConstants.STRING) as String
+    return value.takeIf { it.isNotEmpty() }
+}
+
+val checkstyleIndentSize = readCheckstyleProperty("Indentation", "basicOffset")?.toIntOrNull() ?: 4
+val checkstyleLineLength = readCheckstyleProperty("LineLength", "max")?.toIntOrNull() ?: 120
+
+val generatedFormatterFile = layout.buildDirectory.file("generated/spotless/eclipse-checkstyle.xml").get().asFile
+if (!generatedFormatterFile.parentFile.exists()) {
+    generatedFormatterFile.parentFile.mkdirs()
+}
+val formatterXml = """<?xml version="1.0" encoding="UTF-8"?>
+<profiles version="12">
+    <profile kind="CodeFormatterProfile" name="checkstyle-derived" version="12">
+        <setting id="org.eclipse.jdt.core.formatter.tabulation.char" value="space"/>
+        <setting id="org.eclipse.jdt.core.formatter.tabulation.size" value="$checkstyleIndentSize"/>
+        <setting id="org.eclipse.jdt.core.formatter.indentation.size" value="$checkstyleIndentSize"/>
+        <setting id="org.eclipse.jdt.core.formatter.lineSplit" value="$checkstyleLineLength"/>
+        <setting id="org.eclipse.jdt.core.formatter.comment.line_length" value="$checkstyleLineLength"/>
+        <setting id="org.eclipse.jdt.core.formatter.join_wrapped_lines" value="false"/>
+        <setting id="org.eclipse.jdt.core.formatter.tabulation.char.use_tabs_only_for_leading_indentations" value="false"/>
+    </profile>
+</profiles>
+"""
+if (!generatedFormatterFile.exists() || generatedFormatterFile.readText() != formatterXml) {
+    generatedFormatterFile.writeText(formatterXml)
+}
+
 
 val springBootBomVersion = "3.5.5"
 
@@ -176,6 +215,41 @@ tasks.withType<Checkstyle> {
         xml.required.set(true)
         html.required.set(false)
     }
+    exclude("**/generated/**")
+    exclude("${layout.buildDirectory.get().asFile}/generated/**")
+}
+
+tasks.named<Checkstyle>("checkstyleMain") {
+    source = fileTree("src/main/java")
+}
+
+tasks.named<Checkstyle>("checkstyleTest") {
+    source = fileTree("src/test/java")
+}
+
+spotless {
+    java {
+        target("src/**/*.java")
+        indentWithSpaces(checkstyleIndentSize)
+        trimTrailingWhitespace()
+        endWithNewline()
+        removeUnusedImports()
+        importOrder()
+        eclipse().configFile(generatedFormatterFile)
+    }
+
+    format("misc") {
+        target("*.gradle", "*.md", ".gitignore", "**/*.yml", "**/*.yaml")
+        indentWithSpaces(2)
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+tasks.register("formatCode") {
+    group = "formatting"
+    description = "Formats Java sources via Spotless"
+    dependsOn("spotlessApply")
 }
 
 tasks.withType<Test> {

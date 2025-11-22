@@ -1,15 +1,17 @@
 package ru.chousik.is.dto.mapper;
 
-import org.mapstruct.Mapper;
-import org.mapstruct.MappingConstants;
-import org.mapstruct.ReportingPolicy;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import org.mapstruct.Mapper;
+import org.mapstruct.MappingConstants;
+import org.mapstruct.ReportingPolicy;
 import ru.chousik.is.api.model.StudyGroupResponse;
 import ru.chousik.is.entity.StudyGroup;
 
-@Mapper(unmappedTargetPolicy = ReportingPolicy.IGNORE, componentModel = MappingConstants.ComponentModel.SPRING,
+@Mapper(
+        unmappedTargetPolicy = ReportingPolicy.IGNORE,
+        componentModel = MappingConstants.ComponentModel.SPRING,
         uses = {CoordinatesMapper.class, PersonMapper.class})
 public interface StudyGroupMapper {
     StudyGroup toEntity(StudyGroupResponse studyGroupResponse);

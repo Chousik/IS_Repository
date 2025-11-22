@@ -1,11 +1,23 @@
 package ru.chousik.is.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-@Table(name = "coordinates")
+@Table(
+        name = "coordinates",
+        uniqueConstraints = @UniqueConstraint(name = "uq_coordinates_xy", columnNames = {"x", "y"}))
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -17,6 +29,7 @@ public class Coordinates {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private long x;
 
     @NotNull

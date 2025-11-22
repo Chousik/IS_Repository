@@ -1,5 +1,6 @@
 package ru.chousik.is.controller;
 
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,8 +17,6 @@ import ru.chousik.is.api.model.PersonAddRequest;
 import ru.chousik.is.api.model.PersonResponse;
 import ru.chousik.is.api.model.PersonUpdateRequest;
 import ru.chousik.is.service.PersonService;
-
-import java.util.List;
 
 @RestController
 @RequestMapping
@@ -41,8 +40,8 @@ public class PersonController extends PageHelper implements PersonsApi {
 
     @Override
     @SuppressWarnings("rawtypes")
-    public ResponseEntity<PagedModel> apiV1PersonsGet(Integer page, Integer size, String sort,
-                                                      String sortBy, String direction) {
+    public ResponseEntity<PagedModel> apiV1PersonsGet(
+            Integer page, Integer size, String sort, String sortBy, String direction) {
         Pageable pageable = toPageable(page, size);
         Sort.Direction sortDirection = resolveDirection(direction);
         String sortField = resolveSortField(sortBy, sort);
@@ -52,8 +51,7 @@ public class PersonController extends PageHelper implements PersonsApi {
     }
 
     @Override
-    public ResponseEntity<PersonResponse> apiV1PersonsIdDelete(
-            @PathVariable("id") Long id) {
+    public ResponseEntity<PersonResponse> apiV1PersonsIdDelete(@PathVariable("id") Long id) {
         PersonResponse response = personService.delete(id);
         if (response == null) {
             return ResponseEntity.noContent().build();
@@ -62,15 +60,13 @@ public class PersonController extends PageHelper implements PersonsApi {
     }
 
     @Override
-    public ResponseEntity<PersonResponse> apiV1PersonsIdGet(
-            @PathVariable("id") Long id) {
+    public ResponseEntity<PersonResponse> apiV1PersonsIdGet(@PathVariable("id") Long id) {
         return ResponseEntity.ok(personService.getById(id));
     }
 
     @Override
     public ResponseEntity<PersonResponse> apiV1PersonsIdPatch(
-            @PathVariable("id") Long id,
-            @RequestBody PersonUpdateRequest personUpdateRequest) {
+            @PathVariable("id") Long id, @RequestBody PersonUpdateRequest personUpdateRequest) {
         return ResponseEntity.ok(personService.update(id, personUpdateRequest));
     }
 
