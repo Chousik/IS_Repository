@@ -12,8 +12,6 @@ import ru.chousik.is.api.model.StudyGroupAddRequest;
 import ru.chousik.is.api.model.StudyGroupExpelledTotalResponse;
 import ru.chousik.is.api.model.StudyGroupResponse;
 import ru.chousik.is.api.model.StudyGroupShouldBeExpelledGroupResponse;
-import ru.chousik.is.dto.mapper.CoordinatesMapper;
-import ru.chousik.is.dto.mapper.LocationMapper;
 import ru.chousik.is.dto.mapper.StudyGroupMapper;
 import ru.chousik.is.entity.Coordinates;
 import ru.chousik.is.entity.FormOfEducation;
@@ -23,12 +21,11 @@ import ru.chousik.is.event.EntityChangeNotifier;
 import ru.chousik.is.exception.BadRequestException;
 import ru.chousik.is.exception.NotFoundException;
 import ru.chousik.is.repository.CoordinatesRepository;
-import ru.chousik.is.repository.LocationRepository;
-import ru.chousik.is.repository.PersonRepository;
 import ru.chousik.is.repository.StudyGroupRepository;
 import ru.chousik.is.repository.StudyGroupRepository.ShouldBeExpelledGroupProjection;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,6 +37,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+
+import java.time.ZoneOffset;
 
 @ExtendWith(MockitoExtension.class)
 class StudyGroupServiceTest {
@@ -57,7 +56,7 @@ class StudyGroupServiceTest {
     private StudyGroupService service;
 
     @Test
-    void deleteAllBySemester_removesGroupsAndUnusedCoordinates() {
+    void deleteAllBySemesterRemovesGroupsAndUnusedCoordinates() {
         Semester semester = Semester.FIRST;
         Coordinates coordinates1 = Coordinates.builder().id(10L).x(1L).y(1.0f).build();
         Coordinates coordinates2 = Coordinates.builder().id(20L).x(2L).y(2.0f).build();
@@ -86,13 +85,13 @@ class StudyGroupServiceTest {
     }
 
     @Test
-    void deleteAllBySemester_requiresSemester() {
+    void deleteAllBySemesterRequiresSemester() {
         assertThrows(BadRequestException.class, () -> service.deleteAllBySemester(null));
         verifyNoInteractions(studyGroupRepository, coordinatesRepository, entityChangeNotifier);
     }
 
     @Test
-    void deleteAllBySemester_throwsWhenNothingFound() {
+    void deleteAllBySemesterThrowsWhenNothingFound() {
         Semester semester = Semester.SECOND;
         when(studyGroupRepository.findAllBySemesterEnum(semester)).thenReturn(List.of());
 
@@ -102,7 +101,7 @@ class StudyGroupServiceTest {
     }
 
     @Test
-    void deleteOneBySemester_removesCoordinateWhenUnused() {
+    void deleteOneBySemesterRemovesCoordinateWhenUnused() {
         Semester semester = Semester.FOURTH;
         Coordinates coordinates = Coordinates.builder().id(30L).x(3L).y(3.0f).build();
         StudyGroup group = buildGroup(5L, "Group", semester, coordinates);
@@ -122,7 +121,7 @@ class StudyGroupServiceTest {
     }
 
     @Test
-    void deleteOneBySemester_doesNotRemoveCoordinateIfStillUsed() {
+    void deleteOneBySemesterDoesNotRemoveCoordinateIfStillUsed() {
         Semester semester = Semester.SEVENTH;
         Coordinates coordinates = Coordinates.builder().id(40L).x(4L).y(4.0f).build();
         StudyGroup group = buildGroup(7L, "Another", semester, coordinates);
@@ -139,7 +138,7 @@ class StudyGroupServiceTest {
     }
 
     @Test
-    void deleteOneBySemester_throwsWhenNothingFound() {
+    void deleteOneBySemesterThrowsWhenNothingFound() {
         Semester semester = Semester.SIXTH;
         when(studyGroupRepository.findFirstBySemesterEnum(semester)).thenReturn(Optional.empty());
 
@@ -148,7 +147,7 @@ class StudyGroupServiceTest {
     }
 
     @Test
-    void groupByShouldBeExpelled_mapsProjection() {
+    void groupByShouldBeExpelledMapsProjection() {
         ShouldBeExpelledGroupProjection projection = new ShouldBeExpelledGroupProjection() {
             @Override
             public long getShouldBeExpelled() {
@@ -171,7 +170,7 @@ class StudyGroupServiceTest {
     }
 
     @Test
-    void totalExpelledStudents_returnsZeroWhenRepositoryReturnsNull() {
+    void totalExpelledStudentsReturnsZeroWhenRepositoryReturnsNull() {
         when(studyGroupRepository.sumExpelledStudents()).thenReturn(null);
 
         StudyGroupExpelledTotalResponse response = service.totalExpelledStudents();
@@ -180,7 +179,7 @@ class StudyGroupServiceTest {
     }
 
     @Test
-    void totalExpelledStudents_delegatesToRepository() {
+    void totalExpelledStudentsDelegatesToRepository() {
         when(studyGroupRepository.sumExpelledStudents()).thenReturn(42L);
 
         StudyGroupExpelledTotalResponse response = service.totalExpelledStudents();
@@ -189,7 +188,7 @@ class StudyGroupServiceTest {
     }
 
     @Test
-    void create_throwsWhenBothCoordinateSourcesProvided() {
+    void createThrowsWhenBothCoordinateSourcesProvided() {
         StudyGroupAddRequest request = new StudyGroupAddRequest()
                 .coordinatesId(11L)
                 .coordinates(new CoordinatesAddRequest().x(1L).y(2.0f))
@@ -207,7 +206,7 @@ class StudyGroupServiceTest {
     }
 
     @Test
-    void create_throwsWhenCoordinatesMissing() {
+    void createThrowsWhenCoordinatesMissing() {
         StudyGroupAddRequest request = new StudyGroupAddRequest()
                 .studentsCount(10L)
                 .expelledStudents(5L)
@@ -253,7 +252,7 @@ class StudyGroupServiceTest {
                 .id(group.getId())
                 .name(group.getName())
                 .coordinates(coordinatesResponse)
-                .creationDate(group.getCreationDate())
+                .creationDate(group.getCreationDate() == null ? null : group.getCreationDate().atOffset(ZoneOffset.UTC))
                 .studentsCount(group.getStudentsCount())
                 .expelledStudents(group.getExpelledStudents())
                 .course(group.getCourse())
