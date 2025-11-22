@@ -17,9 +17,8 @@ public interface StudyGroupRepository extends JpaRepository<StudyGroup, Long> {
 
     Optional<StudyGroup> findFirstBySemesterEnum(Semester semesterEnum);
 
-    @Query(
-            "select sg.shouldBeExpelled as shouldBeExpelled, "
-                    + "count(sg) as total from StudyGroup sg group by sg.shouldBeExpelled")
+    @Query("select sg.shouldBeExpelled as shouldBeExpelled, "
+            + "count(sg) as total from StudyGroup sg group by sg.shouldBeExpelled")
     List<ShouldBeExpelledGroupProjection> countGroupedByShouldBeExpelled();
 
     @Query("select coalesce(sum(sg.expelledStudents), 0) from StudyGroup sg")
@@ -27,9 +26,8 @@ public interface StudyGroupRepository extends JpaRepository<StudyGroup, Long> {
 
     boolean existsByCoordinatesId(Long coordinatesId);
 
-    @Query(
-            "select coalesce(max(sg.sequenceNumber), 0) from StudyGroup sg "
-                    + "where sg.formOfEducation = :form and sg.course = :course")
+    @Query("select coalesce(max(sg.sequenceNumber), 0) from StudyGroup sg "
+            + "where sg.formOfEducation = :form and sg.course = :course")
     int findMaxSequenceNumber(@Param("form") FormOfEducation form, @Param("course") int course);
 
     boolean existsByGroupAdminId(Long groupAdminId);

@@ -17,7 +17,9 @@ import lombok.Setter;
 @Entity
 @Table(
         name = "coordinates",
-        uniqueConstraints = @UniqueConstraint(name = "uq_coordinates_xy", columnNames = {"x", "y"}))
+        uniqueConstraints = @UniqueConstraint(
+                name = "uq_coordinates_xy",
+                columnNames = {"x", "y"}))
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
