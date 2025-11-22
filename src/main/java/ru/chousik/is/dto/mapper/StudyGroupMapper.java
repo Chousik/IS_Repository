@@ -12,7 +12,10 @@ import ru.chousik.is.entity.StudyGroup;
 @Mapper(
         unmappedTargetPolicy = ReportingPolicy.IGNORE,
         componentModel = MappingConstants.ComponentModel.SPRING,
-        uses = {CoordinatesMapper.class, PersonMapper.class})
+        uses = {
+            CoordinatesMapper.class,
+            PersonMapper.class
+        })
 public interface StudyGroupMapper {
     StudyGroup toEntity(StudyGroupResponse studyGroupResponse);
 

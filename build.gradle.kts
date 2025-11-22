@@ -45,6 +45,8 @@ val formatterXml = """<?xml version="1.0" encoding="UTF-8"?>
         <setting id="org.eclipse.jdt.core.formatter.tabulation.char" value="space"/>
         <setting id="org.eclipse.jdt.core.formatter.tabulation.size" value="$checkstyleIndentSize"/>
         <setting id="org.eclipse.jdt.core.formatter.indentation.size" value="$checkstyleIndentSize"/>
+        <setting id="org.eclipse.jdt.core.formatter.continuation_indentation" value="1"/>
+        <setting id="org.eclipse.jdt.core.formatter.continuation_indentation_for_array_initializer" value="1"/>
         <setting id="org.eclipse.jdt.core.formatter.lineSplit" value="$checkstyleLineLength"/>
         <setting id="org.eclipse.jdt.core.formatter.comment.line_length" value="$checkstyleLineLength"/>
         <setting id="org.eclipse.jdt.core.formatter.join_wrapped_lines" value="false"/>
@@ -225,31 +227,6 @@ tasks.named<Checkstyle>("checkstyleMain") {
 
 tasks.named<Checkstyle>("checkstyleTest") {
     source = fileTree("src/test/java")
-}
-
-spotless {
-    java {
-        target("src/**/*.java")
-        indentWithSpaces(checkstyleIndentSize)
-        trimTrailingWhitespace()
-        endWithNewline()
-        removeUnusedImports()
-        importOrder()
-        eclipse().configFile(generatedFormatterFile)
-    }
-
-    format("misc") {
-        target("*.gradle", "*.md", ".gitignore", "**/*.yml", "**/*.yaml")
-        indentWithSpaces(2)
-        trimTrailingWhitespace()
-        endWithNewline()
-    }
-}
-
-tasks.register("formatCode") {
-    group = "formatting"
-    description = "Formats Java sources via Spotless"
-    dependsOn("spotlessApply")
 }
 
 tasks.withType<Test> {
