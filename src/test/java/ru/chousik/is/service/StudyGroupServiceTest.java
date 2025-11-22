@@ -166,23 +166,23 @@ class StudyGroupServiceTest {
         assertEquals(3L, item.getCount());
     }
 
-  @Test
-  void totalExpelledStudentsReturnsZeroWhenRepositoryReturnsNull() {
-    when(studyGroupRepository.sumExpelledStudents()).thenReturn(null);
+    @Test
+    void totalExpelledStudentsReturnsZeroWhenRepositoryReturnsNull() {
+        when(studyGroupRepository.sumExpelledStudents()).thenReturn(null);
 
-    StudyGroupExpelledTotalResponse response = service.totalExpelledStudents();
+        StudyGroupExpelledTotalResponse response = service.totalExpelledStudents();
 
-    assertEquals(0L, response.getTotalExpelledStudents());
-  }
+        assertEquals(0L, response.getTotalExpelledStudents());
+    }
 
-  @Test
-  void totalExpelledStudentsDelegatesToRepository() {
-    when(studyGroupRepository.sumExpelledStudents()).thenReturn(42L);
+    @Test
+    void totalExpelledStudentsDelegatesToRepository() {
+        when(studyGroupRepository.sumExpelledStudents()).thenReturn(42L);
 
-    StudyGroupExpelledTotalResponse response = service.totalExpelledStudents();
+        StudyGroupExpelledTotalResponse response = service.totalExpelledStudents();
 
-    assertEquals(42L, response.getTotalExpelledStudents());
-  }
+        assertEquals(42L, response.getTotalExpelledStudents());
+    }
 
     @Test
     void createThrowsWhenBothCoordinateSourcesProvided() {
