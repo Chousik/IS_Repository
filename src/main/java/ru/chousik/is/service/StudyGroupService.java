@@ -1,5 +1,17 @@
 package ru.chousik.is.service;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -36,19 +48,6 @@ import ru.chousik.is.repository.PersonRepository;
 import ru.chousik.is.repository.StudyGroupRepository;
 import ru.chousik.is.repository.StudyGroupRepository.ShouldBeExpelledGroupProjection;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Collectors;
-
 @RequiredArgsConstructor
 @Service
 @Transactional(readOnly = true)
@@ -67,24 +66,26 @@ public class StudyGroupService {
     private static final Map<FormOfEducation, Long> MIN_STUDENTS = Map.of(
             FormOfEducation.DISTANCE_EDUCATION, 20L,
             FormOfEducation.EVENING_CLASSES, 6L,
-            FormOfEducation.FULL_TIME_EDUCATION, 10L
-    );
+            FormOfEducation.FULL_TIME_EDUCATION, 10L);
 
     private static final Map<FormOfEducation, Long> MAX_STUDENTS = Map.of(
             FormOfEducation.DISTANCE_EDUCATION, 100L,
             FormOfEducation.EVENING_CLASSES, 25L,
-            FormOfEducation.FULL_TIME_EDUCATION, 30L
-    );
+            FormOfEducation.FULL_TIME_EDUCATION, 30L);
 
-    public Page<StudyGroupResponse> getAll(Pageable pageable, String sortBy, Sort.Direction direction) {
+    public Page<StudyGroupResponse> getAll(
+            Pageable pageable, String sortBy, Sort.Direction direction) {
         Pageable sortedPageable = applySorting(pageable, sortBy, direction);
         Page<StudyGroup> page = studyGroupRepository.findAll(sortedPageable);
         return page.map(studyGroupMapper::toStudyGroupResponse);
     }
 
     public StudyGroupResponse getById(Long id) {
-        StudyGroup studyGroup = studyGroupRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Учебная группа с идентификатором %d не найдена".formatted(id)));
+        StudyGroup studyGroup = studyGroupRepository
+                .findById(id)
+                .orElseThrow(
+                        () -> new NotFoundException(
+                                "Учебная группа с идентификатором %d не найдена".formatted(id)));
         return studyGroupMapper.toStudyGroupResponse(studyGroup);
     }
 
@@ -93,9 +94,7 @@ public class StudyGroupService {
             return List.of();
         }
         List<StudyGroup> studyGroups = studyGroupRepository.findAllById(ids);
-        return studyGroups.stream()
-                .map(studyGroupMapper::toStudyGroupResponse)
-                .toList();
+        return studyGroups.stream().map(studyGroupMapper::toStudyGroupResponse).toList();
     }
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
@@ -147,8 +146,11 @@ public class StudyGroupService {
     public StudyGroupResponse update(Long id, StudyGroupUpdateRequest request) {
         validateUpdateRequest(request);
 
-        StudyGroup studyGroup = studyGroupRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Учебная группа с идентификатором %d не найдена".formatted(id)));
+        StudyGroup studyGroup = studyGroupRepository
+                .findById(id)
+                .orElseThrow(
+                        () -> new NotFoundException(
+                                "Учебная группа с идентификатором %d не найдена".formatted(id)));
 
         applyUpdates(studyGroup, request);
 
@@ -241,9 +243,7 @@ public class StudyGroupService {
                 .map(Coordinates::getId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        List<StudyGroupResponse> responses = studyGroups.stream()
-                .map(studyGroupMapper::toStudyGroupResponse)
-                .toList();
+        List<StudyGroupResponse> responses = studyGroups.stream().map(studyGroupMapper::toStudyGroupResponse).toList();
         studyGroupRepository.deleteAllInBatch(studyGroups);
         if (!coordinateIds.isEmpty()) {
             List<Long> removableIds = coordinateIds.stream()
@@ -263,7 +263,8 @@ public class StudyGroupService {
         }
         List<StudyGroup> studyGroups = studyGroupRepository.findAllBySemesterEnum(semesterEnum);
         if (studyGroups.isEmpty()) {
-            throw new NotFoundException("Учебные группы с семестром %s не найдены".formatted(semesterEnum));
+            throw new NotFoundException(
+                    "Учебные группы с семестром %s не найдены".formatted(semesterEnum));
         }
         Set<Long> coordinateIds = studyGroups.stream()
                 .map(StudyGroup::getCoordinates)
@@ -271,9 +272,7 @@ public class StudyGroupService {
                 .map(Coordinates::getId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        List<StudyGroupResponse> responses = studyGroups.stream()
-                .map(studyGroupMapper::toStudyGroupResponse)
-                .toList();
+        List<StudyGroupResponse> responses = studyGroups.stream().map(studyGroupMapper::toStudyGroupResponse).toList();
         studyGroupRepository.deleteAllInBatch(studyGroups);
         if (!coordinateIds.isEmpty()) {
             List<Long> removableIds = coordinateIds.stream()
@@ -292,8 +291,11 @@ public class StudyGroupService {
         if (semesterEnum == null) {
             throw new BadRequestException("Не указан semesterEnum");
         }
-        StudyGroup studyGroup = studyGroupRepository.findFirstBySemesterEnum(semesterEnum)
-                .orElseThrow(() -> new NotFoundException("Учебные группы с семестром %s не найдены".formatted(semesterEnum)));
+        StudyGroup studyGroup = studyGroupRepository
+                .findFirstBySemesterEnum(semesterEnum)
+                .orElseThrow(
+                        () -> new NotFoundException(
+                                "Учебные группы с семестром %s не найдены".formatted(semesterEnum)));
         Long coordinateId = studyGroup.getCoordinates() != null ? studyGroup.getCoordinates().getId() : null;
         studyGroupRepository.delete(studyGroup);
         studyGroupRepository.flush();
@@ -305,27 +307,26 @@ public class StudyGroupService {
         return response;
     }
 
-    private record DeletedPayload(Long id) {}
+    private record DeletedPayload(Long id) {
+    }
 
     public List<StudyGroupShouldBeExpelledGroupResponse> groupByShouldBeExpelled() {
         List<ShouldBeExpelledGroupProjection> stats = studyGroupRepository.countGroupedByShouldBeExpelled();
         return stats.stream()
-                .map(item -> new StudyGroupShouldBeExpelledGroupResponse()
-                        .shouldBeExpelled(item.getShouldBeExpelled())
-                        .count(item.getTotal()))
+                .map(
+                        item -> new StudyGroupShouldBeExpelledGroupResponse()
+                                .shouldBeExpelled(item.getShouldBeExpelled())
+                                .count(item.getTotal()))
                 .toList();
     }
 
     public StudyGroupExpelledTotalResponse totalExpelledStudents() {
         Long total = studyGroupRepository.sumExpelledStudents();
-        return new StudyGroupExpelledTotalResponse()
-                .totalExpelledStudents(total == null ? 0 : total);
+        return new StudyGroupExpelledTotalResponse().totalExpelledStudents(total == null ? 0 : total);
     }
 
     private RuntimeException translateConstraintViolation(DataIntegrityViolationException ex) {
-        String message = Optional.ofNullable(ex.getMostSpecificCause())
-                .map(Throwable::getMessage)
-                .orElse("");
+        String message = Optional.ofNullable(ex.getMostSpecificCause()).map(Throwable::getMessage).orElse("");
         if (message.contains("uq_coordinates_xy")) {
             return new BadRequestException("Координаты с такими значениями уже используются", ex);
         }
@@ -336,13 +337,22 @@ public class StudyGroupService {
     }
 
     private void applyUpdates(StudyGroup studyGroup, StudyGroupUpdateRequest request) {
-        applyUpdates(studyGroup, request,
-                request.getCoordinatesId() != null ? resolveExistingCoordinates(request.getCoordinatesId()) : null,
-                request.getGroupAdminId() != null ? resolveExistingPerson(request.getGroupAdminId()) : null);
+        applyUpdates(
+                studyGroup,
+                request,
+                request.getCoordinatesId() != null
+                        ? resolveExistingCoordinates(request.getCoordinatesId())
+                        : null,
+                request.getGroupAdminId() != null
+                        ? resolveExistingPerson(request.getGroupAdminId())
+                        : null);
     }
 
-    private void applyUpdates(StudyGroup studyGroup, StudyGroupUpdateRequest request,
-                              Coordinates coordinatesFromId, Person groupAdminFromId) {
+    private void applyUpdates(
+            StudyGroup studyGroup,
+            StudyGroupUpdateRequest request,
+            Coordinates coordinatesFromId,
+            Person groupAdminFromId) {
         boolean formChanged = false;
         boolean courseChanged = false;
 
@@ -384,7 +394,9 @@ public class StudyGroupService {
         }
 
         if (request.getCoordinatesId() != null) {
-            Coordinates coordinates = coordinatesFromId != null ? coordinatesFromId : resolveExistingCoordinates(request.getCoordinatesId());
+            Coordinates coordinates = coordinatesFromId != null
+                    ? coordinatesFromId
+                    : resolveExistingCoordinates(request.getCoordinatesId());
             studyGroup.setCoordinates(coordinates);
         } else if (request.getCoordinates() != null) {
             Coordinates coordinates = mapNewCoordinates(request.getCoordinates());
@@ -394,7 +406,9 @@ public class StudyGroupService {
         if (Boolean.TRUE.equals(request.getRemoveGroupAdmin())) {
             studyGroup.setGroupAdmin(null);
         } else if (request.getGroupAdminId() != null) {
-            Person admin = groupAdminFromId != null ? groupAdminFromId : resolveExistingPerson(request.getGroupAdminId());
+            Person admin = groupAdminFromId != null
+                    ? groupAdminFromId
+                    : resolveExistingPerson(request.getGroupAdminId());
             ensureGroupAdminAvailable(admin, studyGroup.getId());
             studyGroup.setGroupAdmin(admin);
         } else if (request.getGroupAdmin() != null) {
@@ -408,7 +422,8 @@ public class StudyGroupService {
         }
     }
 
-    private Coordinates resolveCoordinatesForCreate(Long coordinatesId, CoordinatesAddRequest coordinatesDto) {
+    private Coordinates resolveCoordinatesForCreate(
+            Long coordinatesId, CoordinatesAddRequest coordinatesDto) {
         if (coordinatesId != null) {
             return resolveExistingCoordinates(coordinatesId);
         }
@@ -419,8 +434,11 @@ public class StudyGroupService {
     }
 
     private Coordinates resolveExistingCoordinates(Long coordinatesId) {
-        return coordinatesRepository.findById(coordinatesId)
-                .orElseThrow(() -> new NotFoundException("Координаты с идентификатором %d не найдены".formatted(coordinatesId)));
+        return coordinatesRepository
+                .findById(coordinatesId)
+                .orElseThrow(
+                        () -> new NotFoundException(
+                                "Координаты с идентификатором %d не найдены".formatted(coordinatesId)));
     }
 
     private Person resolveGroupAdminForCreate(Long groupAdminId, PersonAddRequest groupAdminDto) {
@@ -445,13 +463,18 @@ public class StudyGroupService {
         }
         boolean exists = coordinatesRepository.findByXAndY(coordinates.getX(), coordinates.getY()).isPresent();
         if (exists) {
-            throw new BadRequestException("Координаты с такими значениями уже существуют. Выберите существующую запись по идентификатору или укажите уникальные значения");
+            throw new BadRequestException(
+                    "Координаты с такими значениями уже существуют. "
+                            + "Выберите существующую запись по идентификатору или укажите уникальные значения");
         }
     }
 
     private Person resolveExistingPerson(Long personId) {
-        return personRepository.findById(personId)
-                .orElseThrow(() -> new NotFoundException("Человек с идентификатором %d не найден".formatted(personId)));
+        return personRepository
+                .findById(personId)
+                .orElseThrow(
+                        () -> new NotFoundException(
+                                "Человек с идентификатором %d не найден".formatted(personId)));
     }
 
     private void ensureGroupAdminAvailable(Person person, Long currentGroupId) {
@@ -483,8 +506,11 @@ public class StudyGroupService {
 
     private Location resolveLocationForPerson(Long locationId, LocationAddRequest locationDto) {
         if (locationId != null) {
-            return locationRepository.findById(locationId)
-                    .orElseThrow(() -> new NotFoundException("Локация с идентификатором %d не найдена".formatted(locationId)));
+            return locationRepository
+                    .findById(locationId)
+                    .orElseThrow(
+                            () -> new NotFoundException(
+                                    "Локация с идентификатором %d не найдена".formatted(locationId)));
         }
         if (locationDto != null) {
             return locationMapper.toEntity(locationDto);
@@ -516,7 +542,9 @@ public class StudyGroupService {
             throw new BadRequestException("Не переданы поля для обновления учебной группы");
         }
 
-        if (request.getClearAverageMark() != null && request.getAverageMark() != null && request.getClearAverageMark()) {
+        if (request.getClearAverageMark() != null
+                && request.getAverageMark() != null
+                && request.getClearAverageMark()) {
             throw new BadRequestException("Нельзя одновременно задавать и очищать поле averageMark");
         }
 
@@ -525,27 +553,35 @@ public class StudyGroupService {
         }
 
         validateCoordinatesInput(request.getCoordinatesId(), request.getCoordinates());
-        validateGroupAdminInput(request.getGroupAdminId(), request.getGroupAdmin(), Boolean.TRUE.equals(request.getRemoveGroupAdmin()));
+        validateGroupAdminInput(
+                request.getGroupAdminId(),
+                request.getGroupAdmin(),
+                Boolean.TRUE.equals(request.getRemoveGroupAdmin()));
     }
 
     private void validateCoordinatesInput(Long coordinatesId, CoordinatesAddRequest coordinatesDto) {
         if (coordinatesId != null && coordinatesDto != null) {
-            throw new BadRequestException("Нельзя одновременно указать идентификатор координат и данные новых координат");
+            throw new BadRequestException(
+                    "Нельзя одновременно указать идентификатор координат и данные новых координат");
         }
     }
 
-    private void validateGroupAdminInput(Long personId, PersonAddRequest personDto, boolean removeRequested) {
+    private void validateGroupAdminInput(
+            Long personId, PersonAddRequest personDto, boolean removeRequested) {
         if (personId != null && personDto != null) {
-            throw new BadRequestException("Нельзя одновременно указать идентификатор администратора и данные нового администратора");
+            throw new BadRequestException(
+                    "Нельзя одновременно указать идентификатор администратора и данные нового администратора");
         }
         if (removeRequested && (personId != null || personDto != null)) {
-            throw new BadRequestException("Нельзя удалить администратора группы и одновременно передавать его данные");
+            throw new BadRequestException(
+                    "Нельзя удалить администратора группы и одновременно передавать его данные");
         }
     }
 
     private void validatePersonLocationInput(Long locationId, LocationAddRequest locationDto) {
         if (locationId != null && locationDto != null) {
-            throw new BadRequestException("Нельзя одновременно указать идентификатор локации и данные новой локации");
+            throw new BadRequestException(
+                    "Нельзя одновременно указать идентификатор локации и данные новой локации");
         }
     }
 
@@ -558,7 +594,8 @@ public class StudyGroupService {
         }
     }
 
-    private void validateStudentsBounds(FormOfEducation formOfEducation, Long studentsCount, boolean allowBelowMinimum) {
+    private void validateStudentsBounds(
+            FormOfEducation formOfEducation, Long studentsCount, boolean allowBelowMinimum) {
         if (formOfEducation == null) {
             throw new BadRequestException("Поле formOfEducation обязательно для применения ограничений");
         }
@@ -568,10 +605,14 @@ public class StudyGroupService {
         Long min = MIN_STUDENTS.get(formOfEducation);
         Long max = MAX_STUDENTS.get(formOfEducation);
         if (min != null && !allowBelowMinimum && studentsCount < min) {
-            throw new BadRequestException("Количество студентов не может быть меньше %d для формы %s".formatted(min, formOfEducation));
+            throw new BadRequestException(
+                    "Количество студентов не может быть меньше %d для формы %s"
+                            .formatted(min, formOfEducation));
         }
         if (max != null && studentsCount > max) {
-            throw new BadRequestException("Количество студентов не может превышать %d для формы %s".formatted(max, formOfEducation));
+            throw new BadRequestException(
+                    "Количество студентов не может превышать %d для формы %s"
+                            .formatted(max, formOfEducation));
         }
     }
 
@@ -586,15 +627,13 @@ public class StudyGroupService {
         }
     }
 
-    private void validateAllIdsPresent(List<Long> requestedIds, Collection<StudyGroup> foundEntities) {
-        Set<Long> foundIds = foundEntities.stream()
-                .map(StudyGroup::getId)
-                .collect(Collectors.toSet());
-        List<Long> missing = requestedIds.stream()
-                .filter(id -> !foundIds.contains(id))
-                .toList();
+    private void validateAllIdsPresent(
+            List<Long> requestedIds, Collection<StudyGroup> foundEntities) {
+        Set<Long> foundIds = foundEntities.stream().map(StudyGroup::getId).collect(Collectors.toSet());
+        List<Long> missing = requestedIds.stream().filter(id -> !foundIds.contains(id)).toList();
         if (!missing.isEmpty()) {
-            throw new NotFoundException("Учебные группы с идентификаторами %s не найдены".formatted(missing));
+            throw new NotFoundException(
+                    "Учебные группы с идентификаторами %s не найдены".formatted(missing));
         }
     }
 
@@ -610,7 +649,9 @@ public class StudyGroupService {
             return false;
         }
 
-        List<StudyGroup> candidates = studyGroupRepository.findByCourseAndFormOfEducationIn(studyGroup.getCourse(), allowedTargets).stream()
+        List<StudyGroup> candidates = studyGroupRepository
+                .findByCourseAndFormOfEducationIn(studyGroup.getCourse(), allowedTargets)
+                .stream()
                 .filter(candidate -> !Objects.equals(candidate.getId(), studyGroup.getId()))
                 .sorted(Comparator.comparingLong(this::availableCapacity).reversed())
                 .toList();
@@ -661,7 +702,8 @@ public class StudyGroupService {
                 StudyGroup persisted = studyGroupRepository.saveAndFlush(splitGroup);
                 createdResponses.add(studyGroupMapper.toStudyGroupResponse(persisted));
             }
-            createdResponses.forEach(response -> entityChangeNotifier.publish("STUDY_GROUP", "CREATED", response));
+            createdResponses.forEach(
+                    response -> entityChangeNotifier.publish("STUDY_GROUP", "CREATED", response));
         }
 
         Long coordinateId = studyGroup.getCoordinates() != null ? studyGroup.getCoordinates().getId() : null;
@@ -733,17 +775,15 @@ public class StudyGroupService {
 
     private Coordinates cloneCoordinates(Coordinates source, int offset) {
         if (source == null) {
-            throw new BadRequestException("Невозможно клонировать координаты для разделения группы: запись отсутствует");
+            throw new BadRequestException(
+                    "Невозможно клонировать координаты для разделения группы: запись отсутствует");
         }
         long candidateX = source.getX() + offset;
         Float baseY = source.getY();
         while (coordinatesRepository.findByXAndY(candidateX, baseY).isPresent()) {
             candidateX++;
         }
-        return Coordinates.builder()
-                .x(candidateX)
-                .y(baseY)
-                .build();
+        return Coordinates.builder().x(candidateX).y(baseY).build();
     }
 
     private long availableCapacity(StudyGroup studyGroup) {
@@ -756,11 +796,12 @@ public class StudyGroupService {
 
     private List<FormOfEducation> resolveAllowedTargetForms(FormOfEducation source) {
         return switch (source) {
-            case FULL_TIME_EDUCATION -> List.of(FormOfEducation.FULL_TIME_EDUCATION,
+            case FULL_TIME_EDUCATION -> List.of(
+                    FormOfEducation.FULL_TIME_EDUCATION,
                     FormOfEducation.DISTANCE_EDUCATION,
                     FormOfEducation.EVENING_CLASSES);
-            case EVENING_CLASSES -> List.of(FormOfEducation.FULL_TIME_EDUCATION,
-                    FormOfEducation.DISTANCE_EDUCATION);
+            case EVENING_CLASSES -> List.of(
+                    FormOfEducation.FULL_TIME_EDUCATION, FormOfEducation.DISTANCE_EDUCATION);
             case DISTANCE_EDUCATION -> List.of(FormOfEducation.DISTANCE_EDUCATION);
         };
     }

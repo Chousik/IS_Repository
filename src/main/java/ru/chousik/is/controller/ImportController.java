@@ -1,5 +1,6 @@
 package ru.chousik.is.controller;
 
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -12,8 +13,6 @@ import org.springframework.web.multipart.MultipartFile;
 import ru.chousik.is.api.model.ImportJobResponse;
 import ru.chousik.is.service.StudyGroupImportService;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/imports")
 @RequiredArgsConstructor
@@ -23,8 +22,7 @@ public class ImportController {
 
     @PostMapping(value = "/study-groups", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ImportJobResponse> importStudyGroups(
-            @RequestPart("file") MultipartFile file
-    ) {
+            @RequestPart("file") MultipartFile file) {
         return ResponseEntity.ok(studyGroupImportService.importStudyGroups(file));
     }
 

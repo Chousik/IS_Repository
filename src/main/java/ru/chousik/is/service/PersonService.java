@@ -1,5 +1,10 @@
 package ru.chousik.is.service;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,12 +26,6 @@ import ru.chousik.is.exception.NotFoundException;
 import ru.chousik.is.repository.LocationRepository;
 import ru.chousik.is.repository.PersonRepository;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 @RequiredArgsConstructor
 @Service
 public class PersonService {
@@ -44,8 +43,10 @@ public class PersonService {
     }
 
     public PersonResponse getById(Long id) {
-        Person person = personRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Человек с идентификатором %d не найден".formatted(id)));
+        Person person = personRepository
+                .findById(id)
+                .orElseThrow(
+                        () -> new NotFoundException("Человек с идентификатором %d не найден".formatted(id)));
         return personMapper.toPersonResponse(person);
     }
 
@@ -54,9 +55,7 @@ public class PersonService {
             return List.of();
         }
         List<Person> people = personRepository.findAllById(ids);
-        return people.stream()
-                .map(personMapper::toPersonResponse)
-                .toList();
+        return people.stream().map(personMapper::toPersonResponse).toList();
     }
 
     public PersonResponse create(PersonAddRequest request) {
@@ -83,8 +82,10 @@ public class PersonService {
     public PersonResponse update(Long id, PersonUpdateRequest request) {
         validateUpdateRequest(request);
 
-        Person person = personRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Человек с идентификатором %d не найден".formatted(id)));
+        Person person = personRepository
+                .findById(id)
+                .orElseThrow(
+                        () -> new NotFoundException("Человек с идентификатором %d не найден".formatted(id)));
 
         applyUpdates(person, request);
 
@@ -141,10 +142,14 @@ public class PersonService {
         responses.forEach(response -> entityChangeNotifier.publish("PERSON", "DELETED", response));
     }
 
-    private record DeletedPayload(Long id) {}
+    private record DeletedPayload(Long id) {
+    }
 
     private void applyUpdates(Person person, PersonUpdateRequest request) {
-        applyUpdates(person, request, request.getLocationId() != null ? resolveExistingLocation(request.getLocationId()) : null);
+        applyUpdates(
+                person,
+                request,
+                request.getLocationId() != null ? resolveExistingLocation(request.getLocationId()) : null);
     }
 
     private void applyUpdates(Person person, PersonUpdateRequest request, Location locationFromId) {
@@ -180,7 +185,10 @@ public class PersonService {
         if (Boolean.TRUE.equals(request.getRemoveLocation())) {
             person.setLocation(null);
         } else if (request.getLocationId() != null) {
-            person.setLocation(locationFromId != null ? locationFromId : resolveExistingLocation(request.getLocationId()));
+            person.setLocation(
+                    locationFromId != null
+                            ? locationFromId
+                            : resolveExistingLocation(request.getLocationId()));
         } else if (request.getLocation() != null) {
             person.setLocation(locationMapper.toEntity(request.getLocation()));
         }
@@ -201,24 +209,35 @@ public class PersonService {
     }
 
     private Location resolveExistingLocation(Long locationId) {
-        return locationRepository.findById(locationId)
-                .orElseThrow(() -> new NotFoundException("Локация с идентификатором %d не найдена".formatted(locationId)));
+        return locationRepository
+                .findById(locationId)
+                .orElseThrow(
+                        () -> new NotFoundException(
+                                "Локация с идентификатором %d не найдена".formatted(locationId)));
     }
 
     private void validateUpdateRequest(PersonUpdateRequest request) {
         if (request == null) {
             throw new BadRequestException("Тело запроса отсутствует");
         }
-        boolean hasAnyField = request.getName() != null || request.getEyeColor() != null || request.getHairColor() != null
-                || request.getLocationId() != null || request.getLocation() != null
-                || Boolean.TRUE.equals(request.getRemoveLocation()) || request.getHeight() != null
-                || request.getWeight() != null || request.getNationality() != null;
+        boolean hasAnyField = request.getName() != null
+                || request.getEyeColor() != null
+                || request.getHairColor() != null
+                || request.getLocationId() != null
+                || request.getLocation() != null
+                || Boolean.TRUE.equals(request.getRemoveLocation())
+                || request.getHeight() != null
+                || request.getWeight() != null
+                || request.getNationality() != null;
 
         if (!hasAnyField) {
             throw new BadRequestException("Не переданы поля для обновления человека");
         }
 
-        validateLocationInput(request.getLocationId(), request.getLocation(), Boolean.TRUE.equals(request.getRemoveLocation()));
+        validateLocationInput(
+                request.getLocationId(),
+                request.getLocation(),
+                Boolean.TRUE.equals(request.getRemoveLocation()));
 
         if (request.getName() != null && request.getName().isBlank()) {
             throw new BadRequestException("Поле name не может быть пустым");
@@ -233,9 +252,11 @@ public class PersonService {
         }
     }
 
-    private void validateLocationInput(Long locationId, LocationAddRequest locationDto, boolean removeRequested) {
+    private void validateLocationInput(
+            Long locationId, LocationAddRequest locationDto, boolean removeRequested) {
         if (locationId != null && locationDto != null) {
-            throw new BadRequestException("Нельзя одновременно указать идентификатор локации и данные новой локации");
+            throw new BadRequestException(
+                    "Нельзя одновременно указать идентификатор локации и данные новой локации");
         }
         if (removeRequested && (locationId != null || locationDto != null)) {
             throw new BadRequestException("Нельзя удалить локацию и одновременно передавать её данные");
@@ -254,12 +275,8 @@ public class PersonService {
     }
 
     private void validateAllIdsPresent(List<Long> requestedIds, Collection<Person> foundEntities) {
-        Set<Long> foundIds = foundEntities.stream()
-                .map(Person::getId)
-                .collect(Collectors.toSet());
-        List<Long> missing = requestedIds.stream()
-                .filter(id -> !foundIds.contains(id))
-                .toList();
+        Set<Long> foundIds = foundEntities.stream().map(Person::getId).collect(Collectors.toSet());
+        List<Long> missing = requestedIds.stream().filter(id -> !foundIds.contains(id)).toList();
         if (!missing.isEmpty()) {
             throw new NotFoundException("Люди с идентификаторами %s не найдены".formatted(missing));
         }

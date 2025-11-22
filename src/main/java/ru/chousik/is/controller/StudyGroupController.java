@@ -1,5 +1,6 @@
 package ru.chousik.is.controller;
 
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,8 +20,6 @@ import ru.chousik.is.api.model.StudyGroupShouldBeExpelledGroupResponse;
 import ru.chousik.is.api.model.StudyGroupUpdateRequest;
 import ru.chousik.is.entity.Semester;
 import ru.chousik.is.service.StudyGroupService;
-
-import java.util.List;
 
 @RestController
 @RequestMapping
@@ -57,8 +56,8 @@ public class StudyGroupController extends PageHelper implements StudyGroupsApi {
 
     @Override
     @SuppressWarnings("rawtypes")
-    public ResponseEntity<PagedModel> apiV1StudyGroupsGet(Integer page, Integer size, String sort,
-                                                          String sortBy, String direction) {
+    public ResponseEntity<PagedModel> apiV1StudyGroupsGet(
+            Integer page, Integer size, String sort, String sortBy, String direction) {
         Pageable pageable = toPageable(page, size);
         Sort.Direction sortDirection = resolveDirection(direction);
         String sortField = resolveSortField(sortBy, sort);
@@ -68,8 +67,7 @@ public class StudyGroupController extends PageHelper implements StudyGroupsApi {
     }
 
     @Override
-    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdDelete(
-            @PathVariable("id") Long id) {
+    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdDelete(@PathVariable("id") Long id) {
         StudyGroupResponse response = studyGroupService.delete(id);
         if (response == null) {
             return ResponseEntity.noContent().build();
@@ -78,15 +76,13 @@ public class StudyGroupController extends PageHelper implements StudyGroupsApi {
     }
 
     @Override
-    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdGet(
-            @PathVariable("id") Long id) {
+    public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdGet(@PathVariable("id") Long id) {
         return ResponseEntity.ok(studyGroupService.getById(id));
     }
 
     @Override
     public ResponseEntity<StudyGroupResponse> apiV1StudyGroupsIdPatch(
-            @PathVariable("id") Long id,
-            @RequestBody StudyGroupUpdateRequest studyGroupUpdateRequest) {
+            @PathVariable("id") Long id, @RequestBody StudyGroupUpdateRequest studyGroupUpdateRequest) {
         return ResponseEntity.ok(studyGroupService.update(id, studyGroupUpdateRequest));
     }
 

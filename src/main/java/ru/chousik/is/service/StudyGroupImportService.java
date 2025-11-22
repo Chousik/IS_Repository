@@ -1,5 +1,13 @@
 package ru.chousik.is.service;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -22,15 +30,6 @@ import ru.chousik.is.event.EntityChangeNotifier;
 import ru.chousik.is.exception.BadRequestException;
 import ru.chousik.is.repository.ImportJobRepository;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-
 @Service
 public class StudyGroupImportService {
 
@@ -41,10 +40,11 @@ public class StudyGroupImportService {
     private final TransactionTemplate transactionTemplate;
     private final EntityChangeNotifier entityChangeNotifier;
 
-    public StudyGroupImportService(StudyGroupService studyGroupService,
-                                   ImportJobRepository importJobRepository,
-                                   PlatformTransactionManager transactionManager,
-                                   EntityChangeNotifier entityChangeNotifier) {
+    public StudyGroupImportService(
+            StudyGroupService studyGroupService,
+            ImportJobRepository importJobRepository,
+            PlatformTransactionManager transactionManager,
+            EntityChangeNotifier entityChangeNotifier) {
         this.studyGroupService = studyGroupService;
         this.importJobRepository = importJobRepository;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
@@ -61,7 +61,8 @@ public class StudyGroupImportService {
         ImportJob job = ImportJob.builder()
                 .entityType(ENTITY_TYPE)
                 .status(ImportStatus.IN_PROGRESS)
-                .filename(file.getOriginalFilename() == null ? "import.yaml" : file.getOriginalFilename())
+                .filename(
+                        file.getOriginalFilename() == null ? "import.yaml" : file.getOriginalFilename())
                 .build();
         job = importJobRepository.save(job);
         publishJobChange(job);
@@ -74,11 +75,12 @@ public class StudyGroupImportService {
             }
             job.setTotalRecords(payloads.size());
             List<StudyGroupAddRequest> immutablePayloads = List.copyOf(payloads);
-            transactionTemplate.executeWithoutResult(status -> {
-                for (StudyGroupAddRequest request : immutablePayloads) {
-                    studyGroupService.create(request);
-                }
-            });
+            transactionTemplate.executeWithoutResult(
+                    status -> {
+                        for (StudyGroupAddRequest request : immutablePayloads) {
+                            studyGroupService.create(request);
+                        }
+                    });
             job.setSuccessCount(payloads.size());
             job.setStatus(ImportStatus.COMPLETED);
         } catch (RuntimeException ex) {
@@ -195,8 +197,14 @@ public class StudyGroupImportService {
                 .totalRecords(job.getTotalRecords())
                 .successCount(job.getSuccessCount())
                 .errorMessage(job.getErrorMessage())
-                .createdAt(job.getCreatedAt() == null ? null : job.getCreatedAt().atOffset(java.time.ZoneOffset.UTC))
-                .finishedAt(job.getFinishedAt() == null ? null : job.getFinishedAt().atOffset(java.time.ZoneOffset.UTC));
+                .createdAt(
+                        job.getCreatedAt() == null
+                                ? null
+                                : job.getCreatedAt().atOffset(java.time.ZoneOffset.UTC))
+                .finishedAt(
+                        job.getFinishedAt() == null
+                                ? null
+                                : job.getFinishedAt().atOffset(java.time.ZoneOffset.UTC));
     }
 
     private String getRequiredString(Map<String, Object> node, String key) {
@@ -266,7 +274,8 @@ public class StudyGroupImportService {
         return parseEnum(value, type, field, false);
     }
 
-    private <E extends Enum<E>> E parseEnum(Object value, Class<E> type, String field, boolean optional) {
+    private <E extends Enum<E>> E parseEnum(
+            Object value, Class<E> type, String field, boolean optional) {
         if (value == null) {
             if (optional) {
                 return null;
@@ -283,7 +292,8 @@ public class StudyGroupImportService {
         try {
             return Enum.valueOf(type, normalized.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
-            throw new BadRequestException("Недопустимое значение '%s' для поля '%s'".formatted(value, field));
+            throw new BadRequestException(
+                    "Недопустимое значение '%s' для поля '%s'".formatted(value, field));
         }
     }
 

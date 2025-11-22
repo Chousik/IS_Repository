@@ -29,7 +29,8 @@ public class PageHelper {
         try {
             return Sort.Direction.fromString(direction);
         } catch (IllegalArgumentException ex) {
-            throw new BadRequestException("Некорректное направление сортировки '%s'".formatted(direction));
+            throw new BadRequestException(
+                    "Некорректное направление сортировки '%s'".formatted(direction));
         }
     }
 }
