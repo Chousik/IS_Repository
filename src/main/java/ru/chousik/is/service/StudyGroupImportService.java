@@ -6,11 +6,12 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.yaml.snakeyaml.Yaml;
-import ru.chousik.is.dto.request.CoordinatesAddRequest;
-import ru.chousik.is.dto.request.LocationAddRequest;
-import ru.chousik.is.dto.request.PersonAddRequest;
-import ru.chousik.is.dto.request.StudyGroupAddRequest;
-import ru.chousik.is.dto.response.ImportJobResponse;
+import ru.chousik.is.api.model.CoordinatesAddRequest;
+import ru.chousik.is.api.model.ImportJobResponse;
+import ru.chousik.is.api.model.ImportJobResponse.StatusEnum;
+import ru.chousik.is.api.model.LocationAddRequest;
+import ru.chousik.is.api.model.PersonAddRequest;
+import ru.chousik.is.api.model.StudyGroupAddRequest;
 import ru.chousik.is.entity.Color;
 import ru.chousik.is.entity.Country;
 import ru.chousik.is.entity.FormOfEducation;
@@ -136,29 +137,25 @@ public class StudyGroupImportService {
         long shouldBeExpelled = getRequiredLong(node, "shouldBeExpelled");
         Integer average = getOptionalInteger(node, "averageMark");
         Map<String, Object> coordinatesNode = getRequiredMap(node, "coordinates");
-        CoordinatesAddRequest coordinates = new CoordinatesAddRequest(
-                getRequiredLong(coordinatesNode, "x"),
-                getRequiredFloat(coordinatesNode, "y")
-        );
+        CoordinatesAddRequest coordinates = new CoordinatesAddRequest()
+                .x(getRequiredLong(coordinatesNode, "x"))
+                .y(getRequiredFloat(coordinatesNode, "y"));
         PersonAddRequest groupAdmin = null;
         if (node.containsKey("groupAdmin") && node.get("groupAdmin") instanceof Map<?, ?> adminNode) {
             groupAdmin = parsePerson((Map<String, Object>) adminNode);
         }
 
-        return new StudyGroupAddRequest(
-                null,
-                coordinates,
-                studentsCount,
-                expelled,
-                course,
-                transferred,
-                form,
-                shouldBeExpelled,
-                average,
-                semester,
-                null,
-                groupAdmin
-        );
+        return new StudyGroupAddRequest()
+                .coordinates(coordinates)
+                .studentsCount(studentsCount)
+                .expelledStudents(expelled)
+                .course(course)
+                .transferredStudents(transferred)
+                .formOfEducation(form)
+                .shouldBeExpelled(shouldBeExpelled)
+                .averageMark(average)
+                .semesterEnum(semester)
+                .groupAdmin(groupAdmin);
     }
 
     @SuppressWarnings("unchecked")
@@ -172,38 +169,34 @@ public class StudyGroupImportService {
         LocationAddRequest location = null;
         if (node.containsKey("location") && node.get("location") instanceof Map<?, ?> locationNode) {
             Map<String, Object> rawLocation = (Map<String, Object>) locationNode;
-            location = new LocationAddRequest(
-                    getRequiredInteger(rawLocation, "x"),
-                    getRequiredDouble(rawLocation, "y"),
-                    getRequiredDouble(rawLocation, "z"),
-                    getRequiredString(rawLocation, "name")
-            );
+            location = new LocationAddRequest()
+                    .x(getRequiredInteger(rawLocation, "x"))
+                    .y(getRequiredDouble(rawLocation, "y"))
+                    .z(getRequiredDouble(rawLocation, "z"))
+                    .name(getRequiredString(rawLocation, "name"));
         }
 
-        return new PersonAddRequest(
-                name,
-                eyeColor,
-                hairColor,
-                null,
-                location,
-                height,
-                weight,
-                nationality
-        );
+        return new PersonAddRequest()
+                .name(name)
+                .eyeColor(eyeColor)
+                .hairColor(hairColor)
+                .location(location)
+                .height(height)
+                .weight(weight)
+                .nationality(nationality);
     }
 
     private ImportJobResponse toResponse(ImportJob job) {
-        return new ImportJobResponse(
-                job.getId(),
-                job.getEntityType(),
-                job.getStatus(),
-                job.getFilename(),
-                job.getTotalRecords(),
-                job.getSuccessCount(),
-                job.getErrorMessage(),
-                job.getCreatedAt(),
-                job.getFinishedAt()
-        );
+        return new ImportJobResponse()
+                .id(job.getId())
+                .entityType(job.getEntityType())
+                .status(StatusEnum.valueOf(job.getStatus().name()))
+                .filename(job.getFilename())
+                .totalRecords(job.getTotalRecords())
+                .successCount(job.getSuccessCount())
+                .errorMessage(job.getErrorMessage())
+                .createdAt(job.getCreatedAt() == null ? null : job.getCreatedAt().atOffset(java.time.ZoneOffset.UTC))
+                .finishedAt(job.getFinishedAt() == null ? null : job.getFinishedAt().atOffset(java.time.ZoneOffset.UTC));
     }
 
     private String getRequiredString(Map<String, Object> node, String key) {

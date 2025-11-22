@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.chousik.is.api.LocationsApi;
-import ru.chousik.is.dto.request.LocationAddRequest;
-import ru.chousik.is.dto.request.LocationUpdateRequest;
-import ru.chousik.is.dto.response.LocationResponse;
+import ru.chousik.is.api.model.LocationAddRequest;
+import ru.chousik.is.api.model.LocationResponse;
+import ru.chousik.is.api.model.LocationUpdateRequest;
 import ru.chousik.is.service.LocationService;
 
 import java.util.List;

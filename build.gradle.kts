@@ -40,21 +40,6 @@ repositories {
 val openApiOutputDir = layout.buildDirectory.dir("generated/openapi")
 
 val openApiTypeMappings = mapOf(
-    "CoordinatesAddRequest" to "ru.chousik.is.dto.request.CoordinatesAddRequest",
-    "CoordinatesUpdateRequest" to "ru.chousik.is.dto.request.CoordinatesUpdateRequest",
-    "CoordinatesResponse" to "ru.chousik.is.dto.response.CoordinatesResponse",
-    "LocationAddRequest" to "ru.chousik.is.dto.request.LocationAddRequest",
-    "LocationUpdateRequest" to "ru.chousik.is.dto.request.LocationUpdateRequest",
-    "LocationResponse" to "ru.chousik.is.dto.response.LocationResponse",
-    "PersonAddRequest" to "ru.chousik.is.dto.request.PersonAddRequest",
-    "PersonUpdateRequest" to "ru.chousik.is.dto.request.PersonUpdateRequest",
-    "PersonResponse" to "ru.chousik.is.dto.response.PersonResponse",
-    "StudyGroupAddRequest" to "ru.chousik.is.dto.request.StudyGroupAddRequest",
-    "StudyGroupUpdateRequest" to "ru.chousik.is.dto.request.StudyGroupUpdateRequest",
-    "StudyGroupResponse" to "ru.chousik.is.dto.response.StudyGroupResponse",
-    "StudyGroupShouldBeExpelledGroupResponse" to "ru.chousik.is.dto.response.StudyGroupShouldBeExpelledGroupResponse",
-    "StudyGroupExpelledTotalResponse" to "ru.chousik.is.dto.response.StudyGroupExpelledTotalResponse",
-    "ImportJobResponse" to "ru.chousik.is.dto.response.ImportJobResponse",
     "PagedCoordinatesResponse" to "org.springframework.data.web.PagedModel",
     "PagedLocationResponse" to "org.springframework.data.web.PagedModel",
     "PagedPersonResponse" to "org.springframework.data.web.PagedModel",
@@ -80,8 +65,11 @@ val openApiAdditionalProperties = mapOf(
 
 val openApiGlobalProperties = mapOf(
     "apis" to "",
+    "models" to "",
     "apiTests" to "false",
     "apiDocs" to "false",
+    "modelTests" to "false",
+    "modelDocs" to "false",
     "supportingFiles" to ""
 )
 

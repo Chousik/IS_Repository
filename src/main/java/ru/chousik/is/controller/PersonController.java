@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.chousik.is.api.PersonsApi;
-import ru.chousik.is.dto.request.PersonAddRequest;
-import ru.chousik.is.dto.request.PersonUpdateRequest;
-import ru.chousik.is.dto.response.PersonResponse;
+import ru.chousik.is.api.model.PersonAddRequest;
+import ru.chousik.is.api.model.PersonResponse;
+import ru.chousik.is.api.model.PersonUpdateRequest;
 import ru.chousik.is.service.PersonService;
 
 import java.util.List;

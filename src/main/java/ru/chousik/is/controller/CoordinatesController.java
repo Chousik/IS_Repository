@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.chousik.is.api.CoordinatesApi;
-import ru.chousik.is.dto.request.CoordinatesAddRequest;
-import ru.chousik.is.dto.request.CoordinatesUpdateRequest;
-import ru.chousik.is.dto.response.CoordinatesResponse;
+import ru.chousik.is.api.model.CoordinatesAddRequest;
+import ru.chousik.is.api.model.CoordinatesResponse;
+import ru.chousik.is.api.model.CoordinatesUpdateRequest;
 import ru.chousik.is.service.CoordinatesService;
 
 import java.util.List;

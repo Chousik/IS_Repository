@@ -7,10 +7,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.stereotype.Service;
+import ru.chousik.is.api.model.CoordinatesAddRequest;
+import ru.chousik.is.api.model.CoordinatesResponse;
+import ru.chousik.is.api.model.CoordinatesUpdateRequest;
 import ru.chousik.is.dto.mapper.CoordinatesMapper;
-import ru.chousik.is.dto.request.CoordinatesAddRequest;
-import ru.chousik.is.dto.request.CoordinatesUpdateRequest;
-import ru.chousik.is.dto.response.CoordinatesResponse;
 import ru.chousik.is.entity.Coordinates;
 import ru.chousik.is.event.EntityChangeNotifier;
 import ru.chousik.is.exception.BadRequestException;
@@ -64,7 +64,7 @@ public class CoordinatesService {
     }
 
     public CoordinatesResponse update(Long id, CoordinatesUpdateRequest request) {
-        if ((request.x() == null) && (request.y() == null)) {
+        if ((request.getX() == null) && (request.getY() == null)) {
             throw new BadRequestException("Не переданы поля для обновления координат");
         }
 

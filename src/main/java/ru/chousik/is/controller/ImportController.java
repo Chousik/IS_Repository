@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import ru.chousik.is.dto.response.ImportJobResponse;
+import ru.chousik.is.api.model.ImportJobResponse;
 import ru.chousik.is.service.StudyGroupImportService;
 
 import java.util.List;

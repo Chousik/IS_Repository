@@ -10,17 +10,17 @@ import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import ru.chousik.is.api.model.CoordinatesAddRequest;
+import ru.chousik.is.api.model.LocationAddRequest;
+import ru.chousik.is.api.model.PersonAddRequest;
+import ru.chousik.is.api.model.StudyGroupAddRequest;
+import ru.chousik.is.api.model.StudyGroupExpelledTotalResponse;
+import ru.chousik.is.api.model.StudyGroupResponse;
+import ru.chousik.is.api.model.StudyGroupShouldBeExpelledGroupResponse;
+import ru.chousik.is.api.model.StudyGroupUpdateRequest;
 import ru.chousik.is.dto.mapper.CoordinatesMapper;
 import ru.chousik.is.dto.mapper.LocationMapper;
 import ru.chousik.is.dto.mapper.StudyGroupMapper;
-import ru.chousik.is.dto.request.CoordinatesAddRequest;
-import ru.chousik.is.dto.request.LocationAddRequest;
-import ru.chousik.is.dto.request.PersonAddRequest;
-import ru.chousik.is.dto.request.StudyGroupAddRequest;
-import ru.chousik.is.dto.request.StudyGroupUpdateRequest;
-import ru.chousik.is.dto.response.StudyGroupExpelledTotalResponse;
-import ru.chousik.is.dto.response.StudyGroupResponse;
-import ru.chousik.is.dto.response.StudyGroupShouldBeExpelledGroupResponse;
 import ru.chousik.is.entity.Coordinates;
 import ru.chousik.is.entity.FormOfEducation;
 import ru.chousik.is.entity.Location;
@@ -103,30 +103,30 @@ public class StudyGroupService {
         if (request == null) {
             throw new BadRequestException("Тело запроса отсутствует");
         }
-        validateCoordinatesInput(request.coordinatesId(), request.coordinates());
-        validateGroupAdminInput(request.groupAdminId(), request.groupAdmin(), false);
-        validateCourseValue(request.course());
-        validateStudentsBounds(request.formOfEducation(), request.studentsCount(), false);
+        validateCoordinatesInput(request.getCoordinatesId(), request.getCoordinates());
+        validateGroupAdminInput(request.getGroupAdminId(), request.getGroupAdmin(), false);
+        validateCourseValue(request.getCourse());
+        validateStudentsBounds(request.getFormOfEducation(), request.getStudentsCount(), false);
 
-        Coordinates coordinates = resolveCoordinatesForCreate(request.coordinatesId(), request.coordinates());
+        Coordinates coordinates = resolveCoordinatesForCreate(request.getCoordinatesId(), request.getCoordinates());
         if (coordinates == null) {
             throw new BadRequestException("Координаты обязательны для создания учебной группы");
         }
 
-        Person groupAdmin = resolveGroupAdminForCreate(request.groupAdminId(), request.groupAdmin());
+        Person groupAdmin = resolveGroupAdminForCreate(request.getGroupAdminId(), request.getGroupAdmin());
         ensureGroupAdminAvailable(groupAdmin, null);
 
         StudyGroup studyGroup = StudyGroup.builder()
                 .name("")
                 .coordinates(coordinates)
-                .studentsCount(request.studentsCount())
-                .expelledStudents(request.expelledStudents())
-                .course(request.course())
-                .transferredStudents(request.transferredStudents())
-                .formOfEducation(request.formOfEducation())
-                .shouldBeExpelled(request.shouldBeExpelled())
-                .averageMark(request.averageMark())
-                .semesterEnum(request.semesterEnum())
+                .studentsCount(request.getStudentsCount())
+                .expelledStudents(request.getExpelledStudents())
+                .course(request.getCourse())
+                .transferredStudents(request.getTransferredStudents())
+                .formOfEducation(request.getFormOfEducation())
+                .shouldBeExpelled(request.getShouldBeExpelled())
+                .averageMark(request.getAverageMark())
+                .semesterEnum(request.getSemesterEnum())
                 .groupAdmin(groupAdmin)
                 .build();
 
@@ -178,13 +178,13 @@ public class StudyGroupService {
         validateAllIdsPresent(ids, studyGroups);
 
         Coordinates resolvedCoordinates = null;
-        if (request.coordinatesId() != null) {
-            resolvedCoordinates = resolveExistingCoordinates(request.coordinatesId());
+        if (request.getCoordinatesId() != null) {
+            resolvedCoordinates = resolveExistingCoordinates(request.getCoordinatesId());
         }
 
         Person resolvedAdmin = null;
-        if (request.groupAdminId() != null) {
-            resolvedAdmin = resolveExistingPerson(request.groupAdminId());
+        if (request.getGroupAdminId() != null) {
+            resolvedAdmin = resolveExistingPerson(request.getGroupAdminId());
         }
 
         for (StudyGroup studyGroup : studyGroups) {
@@ -310,13 +310,16 @@ public class StudyGroupService {
     public List<StudyGroupShouldBeExpelledGroupResponse> groupByShouldBeExpelled() {
         List<ShouldBeExpelledGroupProjection> stats = studyGroupRepository.countGroupedByShouldBeExpelled();
         return stats.stream()
-                .map(item -> new StudyGroupShouldBeExpelledGroupResponse(item.getShouldBeExpelled(), item.getTotal()))
+                .map(item -> new StudyGroupShouldBeExpelledGroupResponse()
+                        .shouldBeExpelled(item.getShouldBeExpelled())
+                        .count(item.getTotal()))
                 .toList();
     }
 
     public StudyGroupExpelledTotalResponse totalExpelledStudents() {
         Long total = studyGroupRepository.sumExpelledStudents();
-        return new StudyGroupExpelledTotalResponse(total == null ? 0 : total);
+        return new StudyGroupExpelledTotalResponse()
+                .totalExpelledStudents(total == null ? 0 : total);
     }
 
     private RuntimeException translateConstraintViolation(DataIntegrityViolationException ex) {
@@ -334,8 +337,8 @@ public class StudyGroupService {
 
     private void applyUpdates(StudyGroup studyGroup, StudyGroupUpdateRequest request) {
         applyUpdates(studyGroup, request,
-                request.coordinatesId() != null ? resolveExistingCoordinates(request.coordinatesId()) : null,
-                request.groupAdminId() != null ? resolveExistingPerson(request.groupAdminId()) : null);
+                request.getCoordinatesId() != null ? resolveExistingCoordinates(request.getCoordinatesId()) : null,
+                request.getGroupAdminId() != null ? resolveExistingPerson(request.getGroupAdminId()) : null);
     }
 
     private void applyUpdates(StudyGroup studyGroup, StudyGroupUpdateRequest request,
@@ -343,59 +346,59 @@ public class StudyGroupService {
         boolean formChanged = false;
         boolean courseChanged = false;
 
-        if (request.formOfEducation() != null) {
-            formChanged = !request.formOfEducation().equals(studyGroup.getFormOfEducation());
-            studyGroup.setFormOfEducation(request.formOfEducation());
+        if (request.getFormOfEducation() != null) {
+            formChanged = !request.getFormOfEducation().equals(studyGroup.getFormOfEducation());
+            studyGroup.setFormOfEducation(request.getFormOfEducation());
         }
 
-        if (request.course() != null) {
-            validateCourseValue(request.course());
-            courseChanged = !request.course().equals(studyGroup.getCourse());
-            studyGroup.setCourse(request.course());
+        if (request.getCourse() != null) {
+            validateCourseValue(request.getCourse());
+            courseChanged = !request.getCourse().equals(studyGroup.getCourse());
+            studyGroup.setCourse(request.getCourse());
         }
 
-        if (request.studentsCount() != null) {
-            studyGroup.setStudentsCount(request.studentsCount());
+        if (request.getStudentsCount() != null) {
+            studyGroup.setStudentsCount(request.getStudentsCount());
         }
 
-        if (request.expelledStudents() != null) {
-            studyGroup.setExpelledStudents(request.expelledStudents());
+        if (request.getExpelledStudents() != null) {
+            studyGroup.setExpelledStudents(request.getExpelledStudents());
         }
 
-        if (request.transferredStudents() != null) {
-            studyGroup.setTransferredStudents(request.transferredStudents());
+        if (request.getTransferredStudents() != null) {
+            studyGroup.setTransferredStudents(request.getTransferredStudents());
         }
 
-        if (request.shouldBeExpelled() != null) {
-            studyGroup.setShouldBeExpelled(request.shouldBeExpelled());
+        if (request.getShouldBeExpelled() != null) {
+            studyGroup.setShouldBeExpelled(request.getShouldBeExpelled());
         }
 
-        if (request.averageMark() != null) {
-            studyGroup.setAverageMark(request.averageMark());
-        } else if (Boolean.TRUE.equals(request.clearAverageMark())) {
+        if (request.getAverageMark() != null) {
+            studyGroup.setAverageMark(request.getAverageMark());
+        } else if (Boolean.TRUE.equals(request.getClearAverageMark())) {
             studyGroup.setAverageMark(null);
         }
 
-        if (request.semesterEnum() != null) {
-            studyGroup.setSemesterEnum(request.semesterEnum());
+        if (request.getSemesterEnum() != null) {
+            studyGroup.setSemesterEnum(request.getSemesterEnum());
         }
 
-        if (request.coordinatesId() != null) {
-            Coordinates coordinates = coordinatesFromId != null ? coordinatesFromId : resolveExistingCoordinates(request.coordinatesId());
+        if (request.getCoordinatesId() != null) {
+            Coordinates coordinates = coordinatesFromId != null ? coordinatesFromId : resolveExistingCoordinates(request.getCoordinatesId());
             studyGroup.setCoordinates(coordinates);
-        } else if (request.coordinates() != null) {
-            Coordinates coordinates = mapNewCoordinates(request.coordinates());
+        } else if (request.getCoordinates() != null) {
+            Coordinates coordinates = mapNewCoordinates(request.getCoordinates());
             studyGroup.setCoordinates(coordinates);
         }
 
-        if (Boolean.TRUE.equals(request.removeGroupAdmin())) {
+        if (Boolean.TRUE.equals(request.getRemoveGroupAdmin())) {
             studyGroup.setGroupAdmin(null);
-        } else if (request.groupAdminId() != null) {
-            Person admin = groupAdminFromId != null ? groupAdminFromId : resolveExistingPerson(request.groupAdminId());
+        } else if (request.getGroupAdminId() != null) {
+            Person admin = groupAdminFromId != null ? groupAdminFromId : resolveExistingPerson(request.getGroupAdminId());
             ensureGroupAdminAvailable(admin, studyGroup.getId());
             studyGroup.setGroupAdmin(admin);
-        } else if (request.groupAdmin() != null) {
-            studyGroup.setGroupAdmin(buildPersonEntity(request.groupAdmin()));
+        } else if (request.getGroupAdmin() != null) {
+            studyGroup.setGroupAdmin(buildPersonEntity(request.getGroupAdmin()));
         }
 
         validateStudentsBounds(studyGroup.getFormOfEducation(), studyGroup.getStudentsCount(), true);
@@ -464,16 +467,16 @@ public class StudyGroupService {
     }
 
     private Person buildPersonEntity(PersonAddRequest request) {
-        validatePersonLocationInput(request.locationId(), request.location());
-        Location location = resolveLocationForPerson(request.locationId(), request.location());
+        validatePersonLocationInput(request.getLocationId(), request.getLocation());
+        Location location = resolveLocationForPerson(request.getLocationId(), request.getLocation());
         Person person = Person.builder()
-                .name(request.name())
-                .eyeColor(request.eyeColor())
-                .hairColor(request.hairColor())
+                .name(request.getName())
+                .eyeColor(request.getEyeColor())
+                .hairColor(request.getHairColor())
                 .location(location)
-                .height(request.height())
-                .weight(request.weight())
-                .nationality(request.nationality())
+                .height(request.getHeight())
+                .weight(request.getWeight())
+                .nationality(request.getNationality())
                 .build();
         return person;
     }
@@ -494,35 +497,35 @@ public class StudyGroupService {
             throw new BadRequestException("Тело запроса отсутствует");
         }
 
-        boolean hasAnyField = request.coordinatesId() != null
-                || request.coordinates() != null
-                || request.studentsCount() != null
-                || request.expelledStudents() != null
-                || request.transferredStudents() != null
-                || request.formOfEducation() != null
-                || request.course() != null
-                || request.shouldBeExpelled() != null
-                || request.averageMark() != null
-                || Boolean.TRUE.equals(request.clearAverageMark())
-                || request.semesterEnum() != null
-                || request.groupAdminId() != null
-                || request.groupAdmin() != null
-                || Boolean.TRUE.equals(request.removeGroupAdmin());
+        boolean hasAnyField = request.getCoordinatesId() != null
+                || request.getCoordinates() != null
+                || request.getStudentsCount() != null
+                || request.getExpelledStudents() != null
+                || request.getTransferredStudents() != null
+                || request.getFormOfEducation() != null
+                || request.getCourse() != null
+                || request.getShouldBeExpelled() != null
+                || request.getAverageMark() != null
+                || Boolean.TRUE.equals(request.getClearAverageMark())
+                || request.getSemesterEnum() != null
+                || request.getGroupAdminId() != null
+                || request.getGroupAdmin() != null
+                || Boolean.TRUE.equals(request.getRemoveGroupAdmin());
 
         if (!hasAnyField) {
             throw new BadRequestException("Не переданы поля для обновления учебной группы");
         }
 
-        if (request.clearAverageMark() != null && request.averageMark() != null && request.clearAverageMark()) {
+        if (request.getClearAverageMark() != null && request.getAverageMark() != null && request.getClearAverageMark()) {
             throw new BadRequestException("Нельзя одновременно задавать и очищать поле averageMark");
         }
 
-        if (request.course() != null) {
-            validateCourseValue(request.course());
+        if (request.getCourse() != null) {
+            validateCourseValue(request.getCourse());
         }
 
-        validateCoordinatesInput(request.coordinatesId(), request.coordinates());
-        validateGroupAdminInput(request.groupAdminId(), request.groupAdmin(), Boolean.TRUE.equals(request.removeGroupAdmin()));
+        validateCoordinatesInput(request.getCoordinatesId(), request.getCoordinates());
+        validateGroupAdminInput(request.getGroupAdminId(), request.getGroupAdmin(), Boolean.TRUE.equals(request.getRemoveGroupAdmin()));
     }
 
     private void validateCoordinatesInput(Long coordinatesId, CoordinatesAddRequest coordinatesDto) {
