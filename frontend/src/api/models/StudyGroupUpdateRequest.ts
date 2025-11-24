@@ -50,12 +50,6 @@ import {
 export interface StudyGroupUpdateRequest {
     /**
      * 
-     * @type {string}
-     * @memberof StudyGroupUpdateRequest
-     */
-    name?: string;
-    /**
-     * 
      * @type {number}
      * @memberof StudyGroupUpdateRequest
      */
@@ -74,16 +68,16 @@ export interface StudyGroupUpdateRequest {
     studentsCount?: number;
     /**
      * 
-     * @type {boolean}
+     * @type {number}
      * @memberof StudyGroupUpdateRequest
      */
-    clearStudentsCount?: boolean;
+    expelledStudents?: number;
     /**
      * 
      * @type {number}
      * @memberof StudyGroupUpdateRequest
      */
-    expelledStudents?: number;
+    course?: number;
     /**
      * 
      * @type {number}
@@ -96,12 +90,6 @@ export interface StudyGroupUpdateRequest {
      * @memberof StudyGroupUpdateRequest
      */
     formOfEducation?: FormOfEducation;
-    /**
-     * 
-     * @type {boolean}
-     * @memberof StudyGroupUpdateRequest
-     */
-    clearFormOfEducation?: boolean;
     /**
      * 
      * @type {number}
@@ -165,15 +153,13 @@ export function StudyGroupUpdateRequestFromJSONTyped(json: any, ignoreDiscrimina
     }
     return {
         
-        'name': json['name'] == null ? undefined : json['name'],
         'coordinatesId': json['coordinatesId'] == null ? undefined : json['coordinatesId'],
         'coordinates': json['coordinates'] == null ? undefined : CoordinatesAddRequestFromJSON(json['coordinates']),
         'studentsCount': json['studentsCount'] == null ? undefined : json['studentsCount'],
-        'clearStudentsCount': json['clearStudentsCount'] == null ? undefined : json['clearStudentsCount'],
         'expelledStudents': json['expelledStudents'] == null ? undefined : json['expelledStudents'],
+        'course': json['course'] == null ? undefined : json['course'],
         'transferredStudents': json['transferredStudents'] == null ? undefined : json['transferredStudents'],
         'formOfEducation': json['formOfEducation'] == null ? undefined : FormOfEducationFromJSON(json['formOfEducation']),
-        'clearFormOfEducation': json['clearFormOfEducation'] == null ? undefined : json['clearFormOfEducation'],
         'shouldBeExpelled': json['shouldBeExpelled'] == null ? undefined : json['shouldBeExpelled'],
         'averageMark': json['averageMark'] == null ? undefined : json['averageMark'],
         'clearAverageMark': json['clearAverageMark'] == null ? undefined : json['clearAverageMark'],
@@ -195,15 +181,13 @@ export function StudyGroupUpdateRequestToJSONTyped(value?: StudyGroupUpdateReque
 
     return {
         
-        'name': value['name'],
         'coordinatesId': value['coordinatesId'],
         'coordinates': CoordinatesAddRequestToJSON(value['coordinates']),
         'studentsCount': value['studentsCount'],
-        'clearStudentsCount': value['clearStudentsCount'],
         'expelledStudents': value['expelledStudents'],
+        'course': value['course'],
         'transferredStudents': value['transferredStudents'],
         'formOfEducation': FormOfEducationToJSON(value['formOfEducation']),
-        'clearFormOfEducation': value['clearFormOfEducation'],
         'shouldBeExpelled': value['shouldBeExpelled'],
         'averageMark': value['averageMark'],
         'clearAverageMark': value['clearAverageMark'],
@@ -213,4 +197,3 @@ export function StudyGroupUpdateRequestToJSONTyped(value?: StudyGroupUpdateReque
         'removeGroupAdmin': value['removeGroupAdmin'],
     };
 }
-

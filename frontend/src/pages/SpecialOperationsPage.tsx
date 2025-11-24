@@ -11,7 +11,7 @@ import { subscribeToEntityChanges } from '../services/events';
 import { useToast } from '../components/ToastProvider';
 import { ResponseError } from '../api/runtime';
 
-const semesterOptions: Semester[] = ['FIRST', 'SECOND', 'FOURTH', 'SIXTH', 'SEVENTH'];
+const semesterOptions: Semester[] = Object.values(Semester);
 
 const SpecialOperationsPage = () => {
   const { showToast } = useToast();

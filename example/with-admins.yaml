@@ -1,0 +1,43 @@
+# Пример с администраторами: соблюдены диапазоны численности по FormOfEducation и обязательные положительные поля.
+groups:
+  - course: 1
+    formOfEducation: EVENING_CLASSES
+    semesterEnum: FIRST
+    studentsCount: 18   # вечерняя форма допускает 6..25 студентов
+    expelledStudents: 1
+    transferredStudents: 1
+    shouldBeExpelled: 1
+    averageMark: 3
+    coordinates:
+      x: -1
+      y: 8.3
+    groupAdmin:
+      name: Bob Brown
+      hairColor: YELLOW
+      eyeColor: BLACK
+      height: 165
+      weight: 60.0
+      nationality: VATICAN
+      location:
+        x: 4
+        y: 0.0
+        z: 10.5
+        name: Club Room
+  - course: 5
+    formOfEducation: FULL_TIME_EDUCATION
+    semesterEnum: SEVENTH
+    studentsCount: 30   # очная форма 10..30
+    expelledStudents: 3
+    transferredStudents: 4
+    shouldBeExpelled: 2
+    averageMark: 5
+    coordinates:
+      x: 310
+      y: 120.75
+    groupAdmin:
+      name: Priya Singh
+      hairColor: ORANGE
+      eyeColor: YELLOW
+      height: 180
+      weight: 68.2
+      nationality: INDIA
