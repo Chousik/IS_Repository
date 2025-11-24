@@ -35,3 +35,9 @@ out/
 
 ### VS Code ###
 .vscode/
+/repo.key
+/script.sql
+
+### MacOS ###
+.DS_Store
+
