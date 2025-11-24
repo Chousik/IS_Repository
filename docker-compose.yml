@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:latest
+    expose:
+      - "5432"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_DB: ${DB_NAME}
+    secrets:
+      - source: postgres_password
+        target: postgres_password
+    ports:
+      - "5432:5432"

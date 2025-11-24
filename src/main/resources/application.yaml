@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: IS-project
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USER}
+    password: ${DB_PASS}
+    url: jdbc:postgresql://pg:5432/studs
+  jpa:
+    open-in-view: false
+    properties:
+      eclipselink.weaving: false
+      eclipselink.ddl-generation: drop-and-create-tables
+      eclipselink.ddl-generation.output-mode: database
+      eclipselink.default-schema: public
+      eclipselink.logging.level: FINE
+server:
+  port: 8041
