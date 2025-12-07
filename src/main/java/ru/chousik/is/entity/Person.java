@@ -1,5 +1,6 @@
 package ru.chousik.is.entity;
 
+import jakarta.persistence.Cacheable;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,6 +14,8 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,6 +24,8 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "person")
+@Cacheable
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE, region = "person")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

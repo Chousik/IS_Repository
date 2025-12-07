@@ -8,6 +8,9 @@ interface ImportJobResponse {
   entityType: string;
   status: 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
   filename: string;
+  contentType?: string;
+  fileSize?: number;
+  downloadUrl?: string;
   totalRecords?: number;
   successCount?: number;
   errorMessage?: string;
@@ -151,7 +154,19 @@ const ImportPage = () => {
               jobs.map((job) => (
                 <tr key={job.id}>
                   <td>{job.id}</td>
-                  <td>{job.filename}</td>
+                  <td>
+                    <div>{job.filename}</div>
+                    {job.downloadUrl && (
+                      <a
+                        className="secondary-btn"
+                        href={job.downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Скачать
+                      </a>
+                    )}
+                  </td>
                   <td>{job.status}</td>
                   <td>{job.status === 'COMPLETED' ? job.successCount ?? job.totalRecords ?? '—' : '—'}</td>
                   <td>{formatDateTime(job.createdAt)}</td>

@@ -1,5 +1,6 @@
 package ru.chousik.is.entity;
 
+import jakarta.persistence.Cacheable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -8,6 +9,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,6 +23,8 @@ import lombok.Setter;
         uniqueConstraints = @UniqueConstraint(
                 name = "uq_coordinates_xy",
                 columnNames = {"x", "y"}))
+@Cacheable
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE, region = "coordinates")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

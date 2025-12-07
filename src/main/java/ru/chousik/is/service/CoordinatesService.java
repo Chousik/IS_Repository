@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import ru.chousik.is.api.model.CoordinatesAddRequest;
 import ru.chousik.is.api.model.CoordinatesResponse;
 import ru.chousik.is.api.model.CoordinatesUpdateRequest;
+import ru.chousik.is.cache.TrackCacheStats;
 import ru.chousik.is.dto.mapper.CoordinatesMapper;
 import ru.chousik.is.entity.Coordinates;
 import ru.chousik.is.event.EntityChangeNotifier;
@@ -38,6 +39,7 @@ public class CoordinatesService {
         return page.map(coordinatesMapper::toCoordinatesResponse);
     }
 
+    @TrackCacheStats
     public CoordinatesResponse getById(Long id) {
         Coordinates coordinates = coordinatesRepository
                 .findById(id)

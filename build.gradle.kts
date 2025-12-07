@@ -164,14 +164,11 @@ configurations.all {
     exclude(group = "org.glassfish.jaxb", module = "jaxb-core")
 }
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa"){
-        exclude(group = "org.hibernate", module = "hibernate-core")
-    }
-    // https://mvnrepository.com/artifact/org.eclipse.persistence/eclipselink
-    implementation("org.eclipse.persistence:eclipselink:4.0.6")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
     compileOnly("org.projectlombok:lombok")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     runtimeOnly("org.postgresql:postgresql")
@@ -199,6 +196,10 @@ dependencies {
     api("com.fasterxml.jackson.core:jackson-annotations")
     api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
     api("org.openapitools:jackson-databind-nullable:0.2.6")
+    implementation("org.apache.commons:commons-dbcp2:2.12.0")
+    implementation("org.ehcache:ehcache:3.10.8")
+    implementation("org.hibernate.orm:hibernate-jcache")
+    implementation("io.minio:minio:8.5.10")
 }
 
 dependencyManagement {

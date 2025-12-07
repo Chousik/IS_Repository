@@ -52,6 +52,14 @@ public class ImportJob {
 
     private LocalDateTime finishedAt;
 
+    private String storageBucket;
+
+    private String storageObjectKey;
+
+    private String storageContentType;
+
+    private Long storageSizeBytes;
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {

@@ -6,12 +6,22 @@ spring:
     username: postgres
     password: postgres
     url: jdbc:postgresql://localhost:5432/is_app
+    type: org.apache.commons.dbcp2.BasicDataSource
+    dbcp2:
+      max-total: 20
+      max-idle: 10
+      min-idle: 2
+      validation-query: SELECT 1
+      test-on-borrow: true
   jpa:
     open-in-view: false
     properties:
-      eclipselink.weaving: false
-      eclipselink.default-schema: public
-      eclipselink.logging.level: FINE
+      hibernate.cache.use_second_level_cache: true
+      hibernate.cache.use_query_cache: true
+      hibernate.cache.region.factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+      hibernate.javax.cache.provider: org.ehcache.jsr107.EhcacheCachingProvider
+      hibernate.javax.cache.uri: classpath:ehcache.xml
+      hibernate.generate_statistics: true
   flyway:
     enabled: true
     baseline-on-migrate: true
@@ -19,3 +29,13 @@ spring:
     locations: classpath:db/migration
 server:
   port: 8041
+app:
+  cache:
+    statistics:
+      enabled: false
+  storage:
+    minio:
+      endpoint: http://localhost:9000
+      bucket: is-imports
+      access-key: minioadmin
+      secret-key: minioadmin

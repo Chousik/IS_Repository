@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import ru.chousik.is.api.model.LocationAddRequest;
 import ru.chousik.is.api.model.LocationResponse;
 import ru.chousik.is.api.model.LocationUpdateRequest;
+import ru.chousik.is.cache.TrackCacheStats;
 import ru.chousik.is.dto.mapper.LocationMapper;
 import ru.chousik.is.entity.Location;
 import ru.chousik.is.event.EntityChangeNotifier;
@@ -36,6 +37,7 @@ public class LocationService {
         return page.map(locationMapper::toLocationResponse);
     }
 
+    @TrackCacheStats
     public LocationResponse getById(Long id) {
         Location location = locationRepository
                 .findById(id)
