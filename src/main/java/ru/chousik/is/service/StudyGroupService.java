@@ -47,7 +47,7 @@ import ru.chousik.is.repository.CoordinatesRepository;
 import ru.chousik.is.repository.LocationRepository;
 import ru.chousik.is.repository.PersonRepository;
 import ru.chousik.is.repository.StudyGroupRepository;
-import ru.chousik.is.repository.StudyGroupRepository.ShouldBeExpelledGroupProjection;
+import ru.chousik.is.repository.projection.ShouldBeExpelledGroupProjection;
 
 @RequiredArgsConstructor
 @Service

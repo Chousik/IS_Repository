@@ -41,3 +41,4 @@ out/
 ### MacOS ###
 .DS_Store
 
+/minio-data/

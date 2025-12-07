@@ -180,6 +180,7 @@ dependencies {
     // https://mvnrepository.com/artifact/org.mapstruct/mapstruct
     implementation("org.mapstruct:mapstruct:1.5.5.Final")
     testImplementation("org.mockito:mockito-core:5.19.0")
+    testImplementation("com.h2database:h2")
     annotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
     // https://mvnrepository.com/artifact/com.nimbusds/nimbus-jose-jwt
     implementation("com.nimbusds:nimbus-jose-jwt:10.3.1")
@@ -200,6 +201,8 @@ dependencies {
     implementation("org.ehcache:ehcache:3.10.8")
     implementation("org.hibernate.orm:hibernate-jcache")
     implementation("io.minio:minio:8.5.10")
+    implementation("javax.xml.bind:jaxb-api:2.3.1")
+    runtimeOnly("org.glassfish.jaxb:jaxb-runtime:2.3.6")
 }
 
 dependencyManagement {
