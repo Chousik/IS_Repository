@@ -7,4 +7,5 @@ public record MinioProperties(
         String endpoint,
         String bucket,
         String accessKey,
-        String secretKey) {}
+        String secretKey) {
+}

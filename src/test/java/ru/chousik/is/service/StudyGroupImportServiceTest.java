@@ -12,15 +12,16 @@ import static org.mockito.Mockito.when;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import java.util.List;
+import org.mockito.stubbing.Answer;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
@@ -122,17 +123,18 @@ class StudyGroupImportServiceTest {
     void businessLogicErrorBetweenResourcesTriggersRollback() {
         when(fileStorageService.stage(multipartFile)).thenReturn(stagedFile);
         when(fileStorageService.openStream(stagedFile)).thenReturn(yamlInput(twoGroupsYaml()));
-        when(studyGroupService.create(any(StudyGroupAddRequest.class))).thenAnswer(new org.mockito.stubbing.Answer<StudyGroupResponse>() {
+        Answer<StudyGroupResponse> failingAnswer = new Answer<>() {
             private int counter = 0;
 
             @Override
-            public StudyGroupResponse answer(org.mockito.invocation.InvocationOnMock invocation) {
+            public StudyGroupResponse answer(InvocationOnMock invocation) {
                 if (counter++ == 0) {
                     return new StudyGroupResponse();
                 }
                 throw new RuntimeException("business rule violated");
             }
-        });
+        };
+        when(studyGroupService.create(any(StudyGroupAddRequest.class))).thenAnswer(failingAnswer);
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> service.importStudyGroups(multipartFile));
         assertEquals("business rule violated", ex.getMessage());
@@ -297,7 +299,7 @@ class StudyGroupImportServiceTest {
         }
 
         @Override
-        public void flush() {}
+        public void flush() { }
 
         @Override
         public boolean isCompleted() {
