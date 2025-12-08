@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import ru.chousik.is.entity.FormOfEducation;
 import ru.chousik.is.entity.Semester;
 import ru.chousik.is.entity.StudyGroup;
+import ru.chousik.is.repository.projection.ShouldBeExpelledGroupProjection;
 
 @Repository
 public interface StudyGroupRepository extends JpaRepository<StudyGroup, Long> {
@@ -36,9 +37,4 @@ public interface StudyGroupRepository extends JpaRepository<StudyGroup, Long> {
 
     List<StudyGroup> findByCourseAndFormOfEducationIn(int course, List<FormOfEducation> forms);
 
-    interface ShouldBeExpelledGroupProjection {
-        long getShouldBeExpelled();
-
-        long getTotal();
-    }
 }

@@ -8,6 +8,9 @@ interface ImportJobResponse {
   entityType: string;
   status: 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
   filename: string;
+  contentType?: string;
+  fileSize?: number;
+  downloadUrl?: string;
   totalRecords?: number;
   successCount?: number;
   errorMessage?: string;
@@ -21,40 +24,81 @@ const ImportPage = () => {
   const [jobs, setJobs] = useState<ImportJobResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const extractErrorMessage = useCallback(async (response: Response): Promise<string> => {
+  interface ErrorDetails {
+    status: number;
+    rawMessage?: string;
+  }
+
+  const extractErrorDetails = useCallback(async (response: Response): Promise<ErrorDetails> => {
+    let rawMessage: string | undefined;
     try {
       const data = await response.json();
-      if (data?.message) return data.message;
-      if (data?.error) return data.error;
+      rawMessage = data?.message ?? data?.error ?? undefined;
     } catch (jsonError) {
-      // ignore and fall through to text
+      // ignore JSON parse issues
     }
-    try {
-      const text = await response.text();
-      if (text) return text;
-    } catch (textError) {
-      // ignore
+    if (!rawMessage) {
+      try {
+        const text = await response.text();
+        rawMessage = text || undefined;
+      } catch (textError) {
+        rawMessage = undefined;
+      }
     }
-    return response.statusText || 'Неизвестная ошибка';
+    return { status: response.status, rawMessage };
   }, []);
+
+  const buildFriendlyError = useCallback((rawMessage?: string, status?: number): string => {
+    const normalized = rawMessage?.toLowerCase() ?? '';
+    if (!rawMessage && (status === undefined || status === 0)) {
+      return 'Сервер импорта недоступен. Проверьте, запущены ли БД и файловое хранилище.';
+    }
+    if (normalized.includes('файл') || normalized.includes('minio') || normalized.includes('хранилищ') || normalized.includes('storage')) {
+      return `Ошибка файлового хранилища (MinIO). ${rawMessage ?? 'Файл не был сохранён.'}`;
+    }
+    if (status && status >= 500) {
+      return `Ошибка сервера или базы данных (HTTP ${status}). ${rawMessage ?? 'Повторите попытку позже.'}`;
+    }
+    return rawMessage ?? 'Не удалось выполнить операцию';
+  }, []);
+
+  const formatCaughtError = useCallback(
+    (error: any) => {
+      if (error?.friendlyMessage) {
+        return error.friendlyMessage as string;
+      }
+      const message = error?.message as string | undefined;
+      if (!message) {
+        return 'Произошла неизвестная ошибка';
+      }
+      const lowered = message.toLowerCase();
+      if (lowered.includes('failed to fetch') || lowered.includes('network')) {
+        return buildFriendlyError(undefined, undefined);
+      }
+      return message;
+    },
+    [buildFriendlyError],
+  );
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch('/api/v1/imports/study-groups');
       if (!response.ok) {
-        const message = await extractErrorMessage(response);
-        throw new Error(message);
+        const details = await extractErrorDetails(response);
+        const friendlyMessage = buildFriendlyError(details.rawMessage, details.status);
+        throw { friendlyMessage };
       }
       const data: ImportJobResponse[] = await response.json();
       setJobs(data);
     } catch (error: any) {
-      showToast(error?.message ?? 'Не удалось загрузить историю импорта', 'error');
+      showToast(formatCaughtError(error) ?? 'Не удалось загрузить историю импорта', 'error');
     } finally {
       setLoading(false);
     }
-  }, [extractErrorMessage, showToast]);
+  }, [buildFriendlyError, extractErrorDetails, formatCaughtError, showToast]);
 
   useEffect(() => {
     fetchHistory();
@@ -91,18 +135,51 @@ const ImportPage = () => {
         body: formData,
       });
       if (!response.ok) {
-        const message = await extractErrorMessage(response);
-        throw new Error(message || 'Не удалось выполнить импорт');
+        const details = await extractErrorDetails(response);
+        const friendlyMessage = buildFriendlyError(details.rawMessage, details.status);
+        throw { friendlyMessage };
       }
       showToast('Импорт выполнен успешно', 'success');
       setSelectedFile(null);
       await fetchHistory();
     } catch (error: any) {
-      showToast(error?.message ?? 'Не удалось выполнить импорт', 'error');
+      showToast(formatCaughtError(error) ?? 'Не удалось выполнить импорт', 'error');
     } finally {
       setUploading(false);
     }
   };
+
+  const handleDownload = useCallback(
+    async (job: ImportJobResponse) => {
+      if (!job.downloadUrl) {
+        showToast('Файл ещё не готов или недоступен для скачивания', 'warning');
+        return;
+      }
+      setDownloadingId(job.id);
+      try {
+        const response = await fetch(job.downloadUrl);
+        if (!response.ok) {
+          const details = await extractErrorDetails(response);
+          const friendlyMessage = buildFriendlyError(details.rawMessage, details.status);
+          throw { friendlyMessage };
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = job.filename || 'import-file.yaml';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (error: any) {
+        showToast(formatCaughtError(error) ?? 'Не удалось скачать файл импорта', 'error');
+      } finally {
+        setDownloadingId(null);
+      }
+    },
+    [buildFriendlyError, extractErrorDetails, formatCaughtError, showToast],
+  );
 
   return (
     <div>
@@ -151,7 +228,19 @@ const ImportPage = () => {
               jobs.map((job) => (
                 <tr key={job.id}>
                   <td>{job.id}</td>
-                  <td>{job.filename}</td>
+                  <td>
+                    <div>{job.filename}</div>
+                    {job.downloadUrl && (
+                      <button
+                        type="button"
+                        className="secondary-btn"
+                        onClick={() => handleDownload(job)}
+                        disabled={downloadingId === job.id}
+                      >
+                        {downloadingId === job.id ? 'Скачивание...' : 'Скачать'}
+                      </button>
+                    )}
+                  </td>
                   <td>{job.status}</td>
                   <td>{job.status === 'COMPLETED' ? job.successCount ?? job.totalRecords ?? '—' : '—'}</td>
                   <td>{formatDateTime(job.createdAt)}</td>

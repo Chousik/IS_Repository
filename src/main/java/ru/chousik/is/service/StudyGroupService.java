@@ -30,6 +30,8 @@ import ru.chousik.is.api.model.StudyGroupExpelledTotalResponse;
 import ru.chousik.is.api.model.StudyGroupResponse;
 import ru.chousik.is.api.model.StudyGroupShouldBeExpelledGroupResponse;
 import ru.chousik.is.api.model.StudyGroupUpdateRequest;
+import ru.chousik.is.cache.TrackCacheStats;
+import ru.chousik.is.hibernate.TrackHibernateQueries;
 import ru.chousik.is.dto.mapper.CoordinatesMapper;
 import ru.chousik.is.dto.mapper.LocationMapper;
 import ru.chousik.is.dto.mapper.StudyGroupMapper;
@@ -46,7 +48,7 @@ import ru.chousik.is.repository.CoordinatesRepository;
 import ru.chousik.is.repository.LocationRepository;
 import ru.chousik.is.repository.PersonRepository;
 import ru.chousik.is.repository.StudyGroupRepository;
-import ru.chousik.is.repository.StudyGroupRepository.ShouldBeExpelledGroupProjection;
+import ru.chousik.is.repository.projection.ShouldBeExpelledGroupProjection;
 
 @RequiredArgsConstructor
 @Service
@@ -80,6 +82,8 @@ public class StudyGroupService {
         return page.map(studyGroupMapper::toStudyGroupResponse);
     }
 
+    @TrackCacheStats
+    @TrackHibernateQueries
     public StudyGroupResponse getById(Long id) {
         StudyGroup studyGroup = studyGroupRepository
                 .findById(id)
@@ -89,6 +93,8 @@ public class StudyGroupService {
         return studyGroupMapper.toStudyGroupResponse(studyGroup);
     }
 
+    @TrackCacheStats
+    @TrackHibernateQueries
     public List<StudyGroupResponse> getByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
