@@ -1,0 +1,11 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+app:
+  cache:
+    statistics:
+      enabled: true
+  hibernate:
+    query-logging:
+      enabled: true

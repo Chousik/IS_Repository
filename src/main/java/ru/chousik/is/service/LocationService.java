@@ -16,6 +16,7 @@ import ru.chousik.is.api.model.LocationAddRequest;
 import ru.chousik.is.api.model.LocationResponse;
 import ru.chousik.is.api.model.LocationUpdateRequest;
 import ru.chousik.is.cache.TrackCacheStats;
+import ru.chousik.is.hibernate.TrackHibernateQueries;
 import ru.chousik.is.dto.mapper.LocationMapper;
 import ru.chousik.is.entity.Location;
 import ru.chousik.is.event.EntityChangeNotifier;
@@ -38,6 +39,7 @@ public class LocationService {
     }
 
     @TrackCacheStats
+    @TrackHibernateQueries
     public LocationResponse getById(Long id) {
         Location location = locationRepository
                 .findById(id)

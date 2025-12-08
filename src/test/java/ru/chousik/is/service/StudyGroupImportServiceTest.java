@@ -38,10 +38,6 @@ import ru.chousik.is.storage.FileStorageService;
 import ru.chousik.is.storage.StagedFile;
 import ru.chousik.is.storage.StorageException;
 
-/**
- * Tests around fault scenarios for {@link StudyGroupImportService}. Each test emulates a failure in one
- * of the collaborating systems and ensures the remaining dependencies remain consistent.
- */
 @ExtendWith(MockitoExtension.class)
 class StudyGroupImportServiceTest {
 

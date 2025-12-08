@@ -33,6 +33,9 @@ app:
   cache:
     statistics:
       enabled: false
+  hibernate:
+    query-logging:
+      enabled: false
   storage:
     minio:
       enabled: true

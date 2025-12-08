@@ -31,6 +31,7 @@ import ru.chousik.is.api.model.StudyGroupResponse;
 import ru.chousik.is.api.model.StudyGroupShouldBeExpelledGroupResponse;
 import ru.chousik.is.api.model.StudyGroupUpdateRequest;
 import ru.chousik.is.cache.TrackCacheStats;
+import ru.chousik.is.hibernate.TrackHibernateQueries;
 import ru.chousik.is.dto.mapper.CoordinatesMapper;
 import ru.chousik.is.dto.mapper.LocationMapper;
 import ru.chousik.is.dto.mapper.StudyGroupMapper;
@@ -82,6 +83,7 @@ public class StudyGroupService {
     }
 
     @TrackCacheStats
+    @TrackHibernateQueries
     public StudyGroupResponse getById(Long id) {
         StudyGroup studyGroup = studyGroupRepository
                 .findById(id)
@@ -92,6 +94,7 @@ public class StudyGroupService {
     }
 
     @TrackCacheStats
+    @TrackHibernateQueries
     public List<StudyGroupResponse> getByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();

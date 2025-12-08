@@ -42,3 +42,4 @@ out/
 .DS_Store
 
 /minio-data/
+/report.txt
