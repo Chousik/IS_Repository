@@ -4,9 +4,12 @@ services:
     expose:
       - "5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: is_app
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_DB: ${DB_NAME}
+    secrets:
+      - source: postgres_password
+        target: postgres_password
     ports:
       - "5432:5432"
   minio:

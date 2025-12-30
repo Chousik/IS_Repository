@@ -3,9 +3,9 @@ spring:
     name: IS-project
   datasource:
     driver-class-name: org.postgresql.Driver
-    username: postgres
-    password: postgres
-    url: jdbc:postgresql://localhost:5432/is_app
+    username: ${DB_USER}
+    password: ${DB_PASS}
+    url: jdbc:postgresql://pg:5432/studs
     type: org.apache.commons.dbcp2.BasicDataSource
     dbcp2:
       max-total: 20
@@ -41,5 +41,5 @@ app:
       enabled: true
       endpoint: http://localhost:9000
       bucket: is-imports
-      access-key: minioadmin
-      secret-key: minioadmin
+      access-key: ${MINIO_ACCESS_KEY}
+      secret-key: ${MINIO_SECRET_KEY}

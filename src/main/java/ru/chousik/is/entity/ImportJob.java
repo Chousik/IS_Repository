@@ -58,7 +58,7 @@ public class ImportJob {
 
     private String storageContentType;
 
-    private Long storageSizeBytes;
+    private long storageSizeBytes;
 
     @PrePersist
     protected void onCreate() {
