@@ -35,7 +35,7 @@ import ru.chousik.is.exception.BadRequestException;
 import ru.chousik.is.exception.NotFoundException;
 import ru.chousik.is.repository.CoordinatesRepository;
 import ru.chousik.is.repository.StudyGroupRepository;
-import ru.chousik.is.repository.StudyGroupRepository.ShouldBeExpelledGroupProjection;
+import ru.chousik.is.repository.projection.ShouldBeExpelledGroupProjection;
 
 @ExtendWith(MockitoExtension.class)
 class StudyGroupServiceTest {
@@ -48,7 +48,6 @@ class StudyGroupServiceTest {
     private StudyGroupMapper studyGroupMapper;
     @Mock
     private EntityChangeNotifier entityChangeNotifier;
-
     @InjectMocks
     private StudyGroupService service;
 

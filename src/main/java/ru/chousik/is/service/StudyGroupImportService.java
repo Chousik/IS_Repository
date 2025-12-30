@@ -1,6 +1,7 @@
 package ru.chousik.is.service;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -8,10 +9,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.yaml.snakeyaml.Yaml;
 import ru.chousik.is.api.model.CoordinatesAddRequest;
@@ -28,7 +33,12 @@ import ru.chousik.is.entity.ImportStatus;
 import ru.chousik.is.entity.Semester;
 import ru.chousik.is.event.EntityChangeNotifier;
 import ru.chousik.is.exception.BadRequestException;
+import ru.chousik.is.exception.NotFoundException;
 import ru.chousik.is.repository.ImportJobRepository;
+import ru.chousik.is.storage.FileStorageService;
+import ru.chousik.is.storage.StagedFile;
+import ru.chousik.is.storage.StoredFile;
+import ru.chousik.is.storage.StorageCommitResult;
 
 @Service
 public class StudyGroupImportService {
@@ -39,18 +49,21 @@ public class StudyGroupImportService {
     private final ImportJobRepository importJobRepository;
     private final TransactionTemplate transactionTemplate;
     private final EntityChangeNotifier entityChangeNotifier;
+    private final FileStorageService fileStorageService;
 
     public StudyGroupImportService(
             StudyGroupService studyGroupService,
             ImportJobRepository importJobRepository,
             PlatformTransactionManager transactionManager,
-            EntityChangeNotifier entityChangeNotifier) {
+            EntityChangeNotifier entityChangeNotifier,
+            FileStorageService fileStorageService) {
         this.studyGroupService = studyGroupService;
         this.importJobRepository = importJobRepository;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
         this.transactionTemplate.setIsolationLevel(TransactionDefinition.ISOLATION_SERIALIZABLE);
         this.entityChangeNotifier = entityChangeNotifier;
+        this.fileStorageService = fileStorageService;
     }
 
     public ImportJobResponse importStudyGroups(MultipartFile file) {
@@ -58,31 +71,34 @@ public class StudyGroupImportService {
             throw new BadRequestException("Выберите непустой YAML-файл для импорта");
         }
 
+        StagedFile stagedFile = fileStorageService.stage(file);
+
         ImportJob job = ImportJob.builder()
                 .entityType(ENTITY_TYPE)
                 .status(ImportStatus.IN_PROGRESS)
                 .filename(
                         file.getOriginalFilename() == null ? "import.yaml" : file.getOriginalFilename())
+                .storageContentType(stagedFile.contentType())
+                .storageSizeBytes(stagedFile.size())
                 .build();
         job = importJobRepository.save(job);
         publishJobChange(job);
 
         RuntimeException failure = null;
-        try {
-            List<StudyGroupAddRequest> payloads = parsePayload(file);
+        StorageSync storageSync = new StorageSync();
+        try (InputStream stream = fileStorageService.openStream(stagedFile)) {
+            List<StudyGroupAddRequest> payloads = parsePayload(stream);
             if (payloads.isEmpty()) {
                 throw new BadRequestException("Файл импорта не содержит записей");
             }
             job.setTotalRecords(payloads.size());
-            List<StudyGroupAddRequest> immutablePayloads = List.copyOf(payloads);
-            transactionTemplate.executeWithoutResult(
-                    status -> {
-                        for (StudyGroupAddRequest request : immutablePayloads) {
-                            studyGroupService.create(request);
-                        }
-                    });
+            importPayloads(List.copyOf(payloads), job, stagedFile, storageSync);
             job.setSuccessCount(payloads.size());
             job.setStatus(ImportStatus.COMPLETED);
+        } catch (IOException ex) {
+            failure = new BadRequestException("Не удалось прочитать файл импорта", ex);
+            job.setStatus(ImportStatus.FAILED);
+            job.setErrorMessage(failure.getMessage());
         } catch (RuntimeException ex) {
             failure = ex;
             job.setStatus(ImportStatus.FAILED);
@@ -94,6 +110,9 @@ public class StudyGroupImportService {
         }
 
         if (failure != null) {
+            if (!storageSync.isCommitted() && !storageSync.isRolledBack()) {
+                fileStorageService.rollback(stagedFile);
+            }
             throw failure;
         }
         return toResponse(job);
@@ -104,8 +123,53 @@ public class StudyGroupImportService {
         return jobs.stream().map(this::toResponse).toList();
     }
 
-    private List<StudyGroupAddRequest> parsePayload(MultipartFile file) {
-        try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8)) {
+    public StoredFile downloadImportFile(UUID jobId) {
+        ImportJob job = importJobRepository
+                .findById(jobId)
+                .orElseThrow(() -> new NotFoundException("Задача импорта %s не найдена".formatted(jobId)));
+        if (job.getStorageBucket() == null || job.getStorageObjectKey() == null) {
+            throw new NotFoundException("Файл для задачи импорта %s недоступен".formatted(jobId));
+        }
+        return fileStorageService.load(
+                job.getStorageBucket(),
+                job.getStorageObjectKey(),
+                job.getFilename(),
+                job.getStorageContentType(),
+                job.getStorageSizeBytes());
+    }
+
+    private void importPayloads(
+            List<StudyGroupAddRequest> payloads, ImportJob job, StagedFile stagedFile, StorageSync storageSync) {
+        transactionTemplate.executeWithoutResult(status -> {
+            registerStorageSynchronization(job, stagedFile, storageSync);
+            for (StudyGroupAddRequest request : payloads) {
+                studyGroupService.create(request);
+            }
+        });
+    }
+
+    private void registerStorageSynchronization(ImportJob job, StagedFile stagedFile, StorageSync storageSync) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void beforeCommit(boolean readOnly) {
+                StorageCommitResult result = fileStorageService.commit(stagedFile, job.getId());
+                job.setStorageBucket(result.bucket());
+                job.setStorageObjectKey(result.objectKey());
+                storageSync.markCommitted();
+            }
+
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_ROLLED_BACK) {
+                    fileStorageService.rollback(stagedFile);
+                    storageSync.markRolledBack();
+                }
+            }
+        });
+    }
+
+    private List<StudyGroupAddRequest> parsePayload(InputStream inputStream) {
+        try (InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8)) {
             Yaml yaml = new Yaml();
             Object loaded = yaml.load(reader);
             if (!(loaded instanceof Map<?, ?> root)) {
@@ -194,6 +258,9 @@ public class StudyGroupImportService {
                 .entityType(job.getEntityType())
                 .status(StatusEnum.valueOf(job.getStatus().name()))
                 .filename(job.getFilename())
+                .contentType(job.getStorageContentType())
+                .fileSize(job.getStorageSizeBytes())
+                .downloadUrl(resolveDownloadUrl(job))
                 .totalRecords(job.getTotalRecords())
                 .successCount(job.getSuccessCount())
                 .errorMessage(job.getErrorMessage())
@@ -207,12 +274,40 @@ public class StudyGroupImportService {
                                 : job.getFinishedAt().atOffset(java.time.ZoneOffset.UTC));
     }
 
+    private String resolveDownloadUrl(ImportJob job) {
+        if (job.getId() == null || job.getStorageObjectKey() == null) {
+            return null;
+        }
+        return "/api/v1/imports/study-groups/%s/file".formatted(job.getId());
+    }
+
     private String getRequiredString(Map<String, Object> node, String key) {
         Object value = node.get(key);
         if (value == null || value.toString().isBlank()) {
             throw new BadRequestException("Поле '%s' обязательно".formatted(key));
         }
         return value.toString();
+    }
+
+    private static final class StorageSync {
+        private final AtomicBoolean committed = new AtomicBoolean(false);
+        private final AtomicBoolean rolledBack = new AtomicBoolean(false);
+
+        void markCommitted() {
+            committed.set(true);
+        }
+
+        void markRolledBack() {
+            rolledBack.set(true);
+        }
+
+        boolean isCommitted() {
+            return committed.get();
+        }
+
+        boolean isRolledBack() {
+            return rolledBack.get();
+        }
     }
 
     private Map<String, Object> getRequiredMap(Map<String, Object> node, String key) {

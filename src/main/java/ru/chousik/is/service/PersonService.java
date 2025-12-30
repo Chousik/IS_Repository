@@ -16,6 +16,8 @@ import ru.chousik.is.api.model.LocationAddRequest;
 import ru.chousik.is.api.model.PersonAddRequest;
 import ru.chousik.is.api.model.PersonResponse;
 import ru.chousik.is.api.model.PersonUpdateRequest;
+import ru.chousik.is.cache.TrackCacheStats;
+import ru.chousik.is.hibernate.TrackHibernateQueries;
 import ru.chousik.is.dto.mapper.LocationMapper;
 import ru.chousik.is.dto.mapper.PersonMapper;
 import ru.chousik.is.entity.Location;
@@ -42,6 +44,8 @@ public class PersonService {
         return page.map(personMapper::toPersonResponse);
     }
 
+    @TrackCacheStats
+    @TrackHibernateQueries
     public PersonResponse getById(Long id) {
         Person person = personRepository
                 .findById(id)
@@ -50,6 +54,8 @@ public class PersonService {
         return personMapper.toPersonResponse(person);
     }
 
+    @TrackCacheStats
+    @TrackHibernateQueries
     public List<PersonResponse> getByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();

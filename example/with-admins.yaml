@@ -9,7 +9,7 @@ groups:
     shouldBeExpelled: 1
     averageMark: 3
     coordinates:
-      x: -1
+      x: 2
       y: 8.3
     groupAdmin:
       name: Bob Brown

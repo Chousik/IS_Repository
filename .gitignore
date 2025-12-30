@@ -41,3 +41,5 @@ out/
 ### MacOS ###
 .DS_Store
 
+/minio-data/
+/report.txt

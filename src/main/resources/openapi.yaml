@@ -578,6 +578,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ImportJobResponse'
+  /api/v1/imports/study-groups/{id}/file:
+    get:
+      tags: [Imports]
+      summary: Скачать исходный файл импорта
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Файл импорта
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Файл не найден
 components:
   parameters:
     IdPathParam:
@@ -944,6 +965,13 @@ components:
           type: string
           enum: [IN_PROGRESS, COMPLETED, FAILED]
         filename:
+          type: string
+        contentType:
+          type: string
+        fileSize:
+          type: integer
+          format: int64
+        downloadUrl:
           type: string
         totalRecords:
           type: integer
