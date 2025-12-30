@@ -18,6 +18,14 @@ interface ImportJobResponse {
   finishedAt?: string;
 }
 
+type FriendlyError = Error & { friendlyMessage?: string };
+
+const createFriendlyError = (friendlyMessage: string): FriendlyError => {
+  const error = new Error(friendlyMessage) as FriendlyError;
+  error.friendlyMessage = friendlyMessage;
+  return error;
+};
+
 const ImportPage = () => {
   const { showToast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -89,7 +97,7 @@ const ImportPage = () => {
       if (!response.ok) {
         const details = await extractErrorDetails(response);
         const friendlyMessage = buildFriendlyError(details.rawMessage, details.status);
-        throw { friendlyMessage };
+        throw createFriendlyError(friendlyMessage);
       }
       const data: ImportJobResponse[] = await response.json();
       setJobs(data);
@@ -137,7 +145,7 @@ const ImportPage = () => {
       if (!response.ok) {
         const details = await extractErrorDetails(response);
         const friendlyMessage = buildFriendlyError(details.rawMessage, details.status);
-        throw { friendlyMessage };
+        throw createFriendlyError(friendlyMessage);
       }
       showToast('Импорт выполнен успешно', 'success');
       setSelectedFile(null);
@@ -161,7 +169,7 @@ const ImportPage = () => {
         if (!response.ok) {
           const details = await extractErrorDetails(response);
           const friendlyMessage = buildFriendlyError(details.rawMessage, details.status);
-          throw { friendlyMessage };
+          throw createFriendlyError(friendlyMessage);
         }
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
